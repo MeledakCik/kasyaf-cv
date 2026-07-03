@@ -26,8 +26,8 @@ function TextOrb({
         <Text3D
           font="/fonts/Poppins_ExtraBold.json"
           size={1.5}
-          height={0.5} // Membuat teks lebih tebal ke belakang
-          bevelEnabled={true} // Wajib untuk kesan 3D kokoh
+          height={0.5} 
+          bevelEnabled={true} 
           bevelSize={0.03} // Detail pinggiran
           bevelThickness={0.04} // Ketebalan pinggiran
           curveSegments={32}
