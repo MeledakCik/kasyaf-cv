@@ -9,9 +9,5 @@ export default async function Page({
 }) {
   const params = await searchParams;
 
-  return (
-    <TemplateClient
-      initialCategory={params.category ?? "All"}
-    />
-  );
+  return <TemplateClient initialCategory={params.category ?? "All"} />;
 }

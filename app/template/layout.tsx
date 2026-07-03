@@ -18,9 +18,9 @@ export default function DashboardLayout({
 }) {
   const router = useRouter();
   const pathname = usePathname();
+  const isGalaxy = pathname === "/template/GalaxyStarField";
 
-  const [isTemplatesOpen, setIsTemplatesOpen] =
-    useState(true);
+  const [isTemplatesOpen, setIsTemplatesOpen] = useState(true);
 
   return (
     <div
@@ -39,9 +39,7 @@ export default function DashboardLayout({
               onClick={() => router.push("/template")}
               className="cursor-pointer mb-10"
             >
-              <h1 className="text-2xl font-black text-blue-500">
-                TEMPLATE
-              </h1>
+              <h1 className="text-2xl font-black text-blue-500">TEMPLATE</h1>
             </div>
 
             <nav className="space-y-2">
@@ -53,18 +51,13 @@ export default function DashboardLayout({
 
               <div>
                 <div
-                  onClick={() =>
-                    setIsTemplatesOpen(!isTemplatesOpen)
-                  }
+                  onClick={() => setIsTemplatesOpen(!isTemplatesOpen)}
                   className="px-5 py-3 rounded-lg cursor-pointer flex justify-between text-white/70 hover:bg-white/5"
                 >
                   Templates
-
                   <span
                     className={`transition ${
-                      isTemplatesOpen
-                        ? "rotate-180"
-                        : ""
+                      isTemplatesOpen ? "rotate-180" : ""
                     }`}
                   >
                     ▼
@@ -74,9 +67,7 @@ export default function DashboardLayout({
                 {isTemplatesOpen && (
                   <div className="pl-5 mt-2 space-y-1">
                     <div
-                      onClick={() =>
-                        router.push("/template")
-                      }
+                      onClick={() => router.push("/template")}
                       className="px-4 py-2 cursor-pointer hover:bg-white/5 rounded-lg"
                     >
                       All
@@ -85,11 +76,7 @@ export default function DashboardLayout({
                     {TEMPLATE_CATEGORIES.map((cat) => (
                       <div
                         key={cat}
-                        onClick={() =>
-                          router.push(
-                            `/template?category=${cat}`
-                          )
-                        }
+                        onClick={() => router.push(`/template?category=${cat}`)}
                         className="px-4 py-2 cursor-pointer hover:bg-white/5 rounded-lg"
                       >
                         {cat}
@@ -102,20 +89,18 @@ export default function DashboardLayout({
               <NavItem
                 label="Leaderboard"
                 path="/leaderboard"
-                active={
-                  pathname === "/leaderboard"
-                }
+                active={pathname === "/leaderboard"}
               />
 
-              <NavItem
-                label="Back"
-                path="/"
-                active={pathname === "/"}
-              />
+              <NavItem label="Back" path="/" active={pathname === "/"} />
             </nav>
           </aside>
 
-          <main className="flex-1 lg:ml-72 overflow-auto p-8">
+          <main
+            className={`flex-1 h-full overflow-y-auto ${
+              isGalaxy ? "p-0" : "lg:ml-72 p-8"
+            }`}
+          >
             {children}
           </main>
         </motion.div>
@@ -139,9 +124,7 @@ function NavItem({
     <div
       onClick={() => router.push(path)}
       className={`px-5 py-3 rounded-lg cursor-pointer transition ${
-        active
-          ? "bg-indigo-600 text-white"
-          : "text-white/50 hover:bg-white/5"
+        active ? "bg-indigo-600 text-white" : "text-white/50 hover:bg-white/5"
       }`}
     >
       {label}

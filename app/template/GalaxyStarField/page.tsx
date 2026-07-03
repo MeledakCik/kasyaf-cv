@@ -65,18 +65,14 @@ export default function Template() {
     },
   ];
   return (
-    <main className="relative min-h-screen w-full bg-[#020617] flex items-center justify-center">
-      <div className="fixed inset-0 z-0">
+    <main className="relative min-h-screen w-full bg-[#020617] flex items-center justify-center overflow-hidden">
+      <div className="absolute inset-0 z-0">
         <BackgroundCanvasTemplate />
       </div>
 
       <div className="relative z-10 flex gap-8">
         {CARDS.map((card) => (
-          <TiltCard
-            key={card.id}
-            card={card}
-            onClick={() => {}}
-          />
+          <TiltCard key={card.id} card={card} onClick={() => {}} />
         ))}
       </div>
     </main>
