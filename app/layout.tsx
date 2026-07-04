@@ -12,7 +12,7 @@ const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
 });
-const SITE_URL = "https://kasyaf-cv-vb5o.vercel.app";
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://kasyaf-cv-vb5o.vercel.app";
 const NAME = "Muhammad Kasyaf Anugrah";
 
 export const viewport: Viewport = {

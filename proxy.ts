@@ -1,88 +1,160 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { createHmac, timingSafeEqual } from 'crypto';
+import { verifySessionWithDevice, signSessionWithDevice, signInternalToken, hmacIdentifier } from '@/lib/auth';
 
-const SECRET_KEY = process.env.COOKIE_SECRET;
-const INTERNAL_API_SECRET = process.env.INTERNAL_API_SECRET;
+const RATE_LIMIT_WINDOW_MS = 60_000;
+const RATE_LIMIT_MAX = 100;
+const ENTRY_TTL_MS = 5 * 60_000;
+const CLEANUP_INTERVAL_MS = 60_000;
+const MAX_MAP_SIZE = 50_000;
+const SESSION_ROTATE_AFTER_MS = 15 * 60_000; 
 
-const rateLimitMap = new Map<string, { count: number; lastReset: number }>();
-
-function verifySignedData(signedValue: string | undefined): string | null {
-  if (!SECRET_KEY) {
-    throw new Error("SECRET_KEY tidak tersedia");
-  }
-  if (!signedValue || !signedValue.includes('.')) return null;
-  const [data, signatureHex] = signedValue.split('.');
-  const expectedHash = createHmac('sha256', SECRET_KEY).update(data).digest('hex');
-  const sigBuffer = Buffer.from(signatureHex, 'hex');
-  const expBuffer = Buffer.from(expectedHash, 'hex');
-  if (sigBuffer.length !== expBuffer.length) {
-    return null;
-  }
-  return timingSafeEqual(sigBuffer, expBuffer) ? data : null;
+interface RateEntry {
+  count: number;
+  lastReset: number;
+  lastSeen: number;
 }
 
-function generateCompositeIdentifier(request: NextRequest): string {
-  if (!SECRET_KEY) {
-    throw new Error("SECRET_KEY tidak tersedia");
+const rateLimitMap = new Map<string, RateEntry>();
+let lastCleanup = Date.now();
+
+function cleanupRateLimitMap(now: number) {
+  for (const [key, entry] of rateLimitMap) {
+    if (now - entry.lastSeen > ENTRY_TTL_MS) rateLimitMap.delete(key);
   }
-  const ip = request.headers.get('x-forwarded-for')?.split(',')[0] || '127.0.0.1';
-  const ua = request.headers.get('user-agent') || 'default';
-  const sessionId = request.cookies.get('session_id')?.value || 'no-session';
-  return createHmac('sha256', SECRET_KEY)
-    .update(`${ip}:${ua}:${sessionId}`)
-    .digest('hex');
+  if (rateLimitMap.size > MAX_MAP_SIZE) {
+    const entries = Array.from(rateLimitMap.entries()).sort((a, b) => a[1].lastSeen - b[1].lastSeen);
+    for (const [key] of entries.slice(0, rateLimitMap.size - MAX_MAP_SIZE)) rateLimitMap.delete(key);
+  }
 }
 
-export function proxy(request: NextRequest) {
+function checkRateLimit(compositeId: string): boolean {
+  const now = Date.now();
+  if (now - lastCleanup > CLEANUP_INTERVAL_MS) {
+    cleanupRateLimitMap(now);
+    lastCleanup = now;
+  }
+
+  const entry = rateLimitMap.get(compositeId);
+  if (!entry || now - entry.lastReset > RATE_LIMIT_WINDOW_MS) {
+    rateLimitMap.set(compositeId, { count: 1, lastReset: now, lastSeen: now });
+    return true;
+  }
+
+  entry.count += 1;
+  entry.lastSeen = now;
+  rateLimitMap.set(compositeId, entry);
+  return entry.count <= RATE_LIMIT_MAX;
+}
+
+function generateNonce(): string {
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  return btoa(String.fromCharCode(...bytes));
+}
+
+function buildCsp(nonce: string): string {
+  const isDev = process.env.NODE_ENV !== 'production';
+
+  const scriptSrc = isDev
+    ? `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' 'wasm-unsafe-eval' 'unsafe-eval'`
+    : `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' 'wasm-unsafe-eval'`;
+
+  return [
+    `default-src 'self'`,
+    scriptSrc,
+    `style-src 'self' 'unsafe-inline'`, // dilonggarkan khusus style, bukan script
+    `img-src 'self' data: blob:`,
+    `font-src 'self' data:`,
+    `connect-src 'self' https://lottie.host https://cdn.jsdelivr.net https://unpkg.com`,
+    `worker-src 'self' blob:`,
+    `frame-ancestors 'none'`,
+    `base-uri 'self'`,
+    `form-action 'self'`,
+    `object-src 'none'`,
+    `upgrade-insecure-requests`,
+  ].join('; ');
+}
+
+export async function proxy(request: NextRequest) {
+  const nonce = generateNonce();
+  const csp = buildCsp(nonce);
+
+  const withCsp = (res: NextResponse) => {
+    res.headers.set('Content-Security-Policy', csp);
+    res.headers.set('x-nonce', nonce);
+    return res;
+  };
+
   const { pathname } = request.nextUrl;
   const ua = request.headers.get('user-agent') || '';
-  if ([/curl/i, /wget/i, /python/i, /headless/i, /bot/i].some(p => p.test(ua))) {
-    return new NextResponse('Access Denied', { status: 403 });
+  const SECRET_KEY = process.env.COOKIE_SECRET;
+  if (!SECRET_KEY) throw new Error('COOKIE_SECRET tidak tersedia');
+
+  if ([/curl/i, /wget/i, /python/i, /headless/i, /bot/i].some((p) => p.test(ua))) {
+    return withCsp(new NextResponse('Access Denied', { status: 403 }));
   }
-  const compositeId = generateCompositeIdentifier(request);
-  const now = Date.now();
-  const limitData = rateLimitMap.get(compositeId) || { count: 0, lastReset: now };
-  if (now - limitData.lastReset > 60000) {
-    limitData.count = 1;
-    limitData.lastReset = now;
-  } else {
-    limitData.count += 1;
+
+  const ip = request.headers.get('x-forwarded-for')?.split(',')[0] || '127.0.0.1';
+  const sessionIdRaw = request.cookies.get('session_id')?.value || 'no-session';
+  const compositeId = await hmacIdentifier(SECRET_KEY, `${ip}:${ua}:${sessionIdRaw}`);
+
+  if (!checkRateLimit(compositeId)) {
+    return withCsp(new NextResponse('Too Many Requests', { status: 429 }));
   }
-  rateLimitMap.set(compositeId, limitData);
-  if (limitData.count > 100) {
-    return new NextResponse('Too Many Requests', { status: 429 });
-  }
+
   if (
-    pathname.startsWith('/v2/shield-verify') || 
-    pathname.startsWith('/_next') || 
-    pathname.startsWith('/api/') || 
+    pathname.startsWith('/v2/shield-verify') ||
+    pathname.startsWith('/_next') ||
+    pathname.startsWith('/api/') ||
     pathname.includes('.')
   ) {
-    return NextResponse.next();
+    // teruskan nonce lewat request header, supaya layout.tsx bisa membacanya
+    const headers = new Headers(request.headers);
+    headers.set('x-nonce', nonce);
+    return withCsp(NextResponse.next({ request: { headers } }));
   }
-  
+
   const sessionId = request.cookies.get('session_id')?.value;
+  const deviceId = request.cookies.get('device_id')?.value;
   const timestamp = request.cookies.get('__cik_ts')?.value;
   const savedFingerprint = request.cookies.get('__cik_fp')?.value;
-  
-  const isValidSession = sessionId && verifySignedData(sessionId) !== null;
-  const isFingerprintValid = savedFingerprint === Buffer.from(ua).toString('base64').substring(0, 16);
-  const isExpired = timestamp ? (Date.now() - parseInt(timestamp) > 86400000) : true;
+
+  const rawSessionId = await verifySessionWithDevice(sessionId, deviceId);
+  const isValidSession = rawSessionId !== null;
+  const isFingerprintValid = savedFingerprint === btoa(ua).substring(0, 16);
+  const isExpired = timestamp ? Date.now() - parseInt(timestamp) > 86400000 : true;
+
   if (!isValidSession || !isFingerprintValid || isExpired) {
     const response = NextResponse.redirect(new URL('/v2/shield-verify', request.url));
-    ['__cik_clearance', 'session_id', 'datr', 'mid', 'dpr', 'csrftoken', '__cik_fp', '__cik_ts']
-      .forEach(c => response.cookies.delete(c));
-    return response;
+    ['__cik_clearance', 'session_id', 'device_id', 'datr', 'mid', 'dpr', 'csrftoken', '__cik_fp', '__cik_ts'].forEach(
+      (c) => response.cookies.delete(c)
+    );
+    return withCsp(response);
   }
+
   const requestHeaders = new Headers(request.headers);
-  if (!INTERNAL_API_SECRET) {
-    throw new Error("FATAL ERROR: INTERNAL_API_SECRET tidak ditemukan di environment variables.");
+  requestHeaders.set('x-internal-auth', await signInternalToken(sessionId as string, pathname));
+  requestHeaders.set('x-nonce', nonce);
+
+  const response = NextResponse.next({ request: { headers: requestHeaders } });
+
+  const sessionIssuedAt = parseInt(timestamp || '0');
+  if (Date.now() - sessionIssuedAt > SESSION_ROTATE_AFTER_MS) {
+    const newRawSessionId = crypto.randomUUID().replace(/-/g, '');
+    const newSignedSession = await signSessionWithDevice(newRawSessionId, deviceId as string);
+
+    response.cookies.set('session_id', newSignedSession, {
+      path: '/', sameSite: 'strict', secure: true, httpOnly: true, maxAge: 3600,
+    });
+    response.cookies.set('__cik_ts', Date.now().toString(), {
+      path: '/', sameSite: 'strict', secure: true, maxAge: 86400,
+    });
   }
-  requestHeaders.set('x-internal-auth', INTERNAL_API_SECRET);
-  return NextResponse.next({
-    request: {
-      headers: requestHeaders,
-    },
-  });
+
+  return withCsp(response);
 }
+
+export const config = {
+  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
+};
