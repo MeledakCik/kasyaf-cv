@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
+import { headers } from "next/headers";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -12,7 +13,8 @@ const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
 });
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://kasyaf-cv-vb5o.vercel.app";
+const SITE_URL =
+  process.env.NEXT_PUBLIC_SITE_URL || "https://kasyaf-cv-vb5o.vercel.app";
 const NAME = "Muhammad Kasyaf Anugrah";
 
 export const viewport: Viewport = {
@@ -140,11 +142,12 @@ const jsonLd = {
   ],
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const nonce = (await headers()).get("x-nonce") ?? "";
   return (
     <html
       lang="id"
@@ -152,9 +155,12 @@ export default function RootLayout({
     >
       <head>
         <Script
+          nonce={nonce}
           id="person-jsonld"
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(jsonLd),
+          }}
         />
       </head>
       <body className="min-h-full flex flex-col bg-black antialiased">
