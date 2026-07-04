@@ -105,7 +105,8 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: `${NAME} - Full Stack Developer & Cyber Security`,
-    description: "Portofolio Muhammad Kasyaf Anugrah, Full Stack Developer yang fokus di front end, back end, dan cyber security.",
+    description:
+      "Portofolio Muhammad Kasyaf Anugrah, Full Stack Developer yang fokus di front end, back end, dan cyber security.",
     images: ["/images/logo.png"],
   },
   icons: {
