@@ -83,7 +83,6 @@ export async function proxy(request: NextRequest) {
   const withCsp = (res: NextResponse) => {
     res.headers.set('Content-Security-Policy', csp);
     res.headers.set('x-nonce', nonce);
-    res.headers.set('x-test-proxy', 'running');
     return res;
   };
 
