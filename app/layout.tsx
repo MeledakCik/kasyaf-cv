@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 const SITE_URL = "https://kasyaf-cv-vb5o.vercel.app";
-const NAME = "Kasyaf";
+const NAME = "Muhammad Kasyaf Anugrah";
 
 export const viewport: Viewport = {
   themeColor: "#0b0f1a",
@@ -28,9 +28,33 @@ export const metadata: Metadata = {
     template: `%s | ${NAME}`,
   },
   description:
-    "Portofolio Kasyaf, Full Stack Developer yang fokus di front end, back end, dan cyber security. Lihat proyek, pengalaman, dan keahlian teknis di sini.",
+    "Portofolio Muhammad Kasyaf Anugrah, Full Stack Developer yang fokus di front end, back end, dan cyber security. Lihat proyek, pengalaman, dan keahlian teknis di sini.",
   keywords: [
     "kasyaf",
+    "kasyaf anugrah",
+    "kasyaf portfolio",
+    "kasyaf cv",
+    "kasyaf resume",
+    "kasyaf github",
+    "kasyaf linkedin",
+    "kasyaf instagram",
+    "kasyaf full stack developer",
+    "kasyaf cyber security",
+    "kasyaf web developer",
+    "kasyaf front end developer",
+    "kasyaf back end developer",
+    "Muhammad Kasyaf Anugrah",
+    "Muhammad Kasyaf Anugrah portfolio",
+    "Muhammad Kasyaf Anugrah cv",
+    "Muhammad Kasyaf Anugrah resume",
+    "Muhammad Kasyaf Anugrah github",
+    "Muhammad Kasyaf Anugrah linkedin",
+    "Muhammad Kasyaf Anugrah instagram",
+    "Muhammad Kasyaf Anugrah full stack developer",
+    "Muhammad Kasyaf Anugrah cyber security",
+    "Muhammad Kasyaf Anugrah web developer",
+    "Muhammad Kasyaf Anugrah front end developer",
+    "Muhammad Kasyaf Anugrah back end developer",
     "portofolio developer",
     "full stack developer indonesia",
     "cyber security",
@@ -64,7 +88,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: `${NAME} - Full Stack Developer & Cyber Security`,
     description:
-      "Portofolio Kasyaf, Full Stack Developer yang fokus di front end, back end, dan cyber security.",
+      "Portofolio Muhammad Kasyaf Anugrah, Full Stack Developer yang fokus di front end, back end, dan cyber security.",
     url: SITE_URL,
     siteName: `${NAME} Portfolio`,
     images: [
