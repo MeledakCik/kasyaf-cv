@@ -30,9 +30,8 @@ export default function DashboardLayout({
 
   return (
     <div
-      className={`${poppins.className} bg-[#0a0e1a] text-[#e2e8f0] h-screen overflow-hidden`}
+      className={`${poppins.className} bg-[#0a0e1a] text-[#e2e8f0] h-screen overflow-hidden select-none`}
     >
-      {/* Top bar - mobile & tablet only */}
       <header className="lg:hidden fixed top-0 left-0 right-0 z-40 flex items-center justify-between px-4 py-3 bg-[#0d1326]/90 backdrop-blur-xl border-b border-white/10">
         <div onClick={() => goTo("/template")} className="cursor-pointer">
           <h1 className="text-lg font-black text-blue-500">TEMPLATE</h1>
@@ -48,8 +47,6 @@ export default function DashboardLayout({
           <span className="block w-5 h-0.5 bg-white/80 rounded-full" />
         </button>
       </header>
-
-      {/* Mobile drawer */}
       <AnimatePresence>
         {isMobileMenuOpen && (
           <>
@@ -105,7 +102,6 @@ export default function DashboardLayout({
           transition={{ duration: 0.4 }}
           className="flex h-full"
         >
-          {/* Desktop sidebar */}
           <aside className="hidden lg:flex w-72 bg-[#0d1326]/80 backdrop-blur-2xl border-r border-white/10 p-6 flex-col fixed h-full">
             <div
               onClick={() => router.push("/template")}
