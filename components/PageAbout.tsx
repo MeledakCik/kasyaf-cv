@@ -56,7 +56,7 @@ const BackButton = ({ onClick }: { onClick: () => void }) => {
         initial="initial"
         onClick={onClick}
         rippleColor="bg-[#075985]/50"
-        className="px-16 py-3 bg-[#075985]/20 border border-[#075985]/40 rounded-full transition-all duration-300 text-lg backdrop-blur-md flex items-center justify-center"
+        className="px-5 py-2 sm:px-12 sm:py-3 md:px-16 md:py-3 bg-[#075985]/20 border border-[#075985]/40 rounded-full transition-all duration-300 text-xs sm:text-base md:text-lg backdrop-blur-md flex items-center justify-center"
       >
         <motion.div
           className="flex whitespace-nowrap"
@@ -111,9 +111,9 @@ export default function AboutSection({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <main className="relative select-none min-h-screen w-full text-white flex flex-col items-center justify-center">
+    <main className="relative select-none h-dvh w-full text-white flex flex-col items-center justify-center overflow-hidden px-4 py-3 sm:px-6 sm:py-12">
       <motion.div
-        className="fixed inset-0 pointer-events-none"
+        className="fixed inset-0 pointer-events-none -z-10"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
@@ -141,7 +141,7 @@ export default function AboutSection({ onClose }: { onClose: () => void }) {
               animate="visible"
               exit={{ opacity: 0, scale: 0.95, filter: "blur(10px)" }}
               transition={{ duration: 0.3 }}
-              className="flex gap-8 z-10"
+              className="flex flex-col sm:flex-row sm:flex-wrap items-center justify-center gap-3 sm:gap-6 md:gap-8 z-10 w-full max-w-5xl flex-1 min-h-0 sm:flex-none"
             >
               {CARDS.map((card) =>
                 card.id === "templates" ? (
@@ -153,13 +153,15 @@ export default function AboutSection({ onClose }: { onClose: () => void }) {
                         ? handleNavigate
                         : (e) => handleSelect(e, card.id)
                     }
-                    className="w-64 h-80 bg-[#075985]/10 backdrop-blur-xl rounded-3xl cursor-pointer select-none flex flex-col items-center justify-center"
+                    className="w-full max-w-sm sm:w-56 md:w-64 h-42 sm:h-72 md:h-80 flex-shrink-0 bg-[#075985]/10 select-none backdrop-blur-xl rounded-2xl sm:rounded-3xl flex flex-col items-center justify-center gap-2 sm:gap-4 md:gap-5 cursor-pointer"
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                   >
-                    <LottieIcon src={card.src} />
-                    <div className="text-center p-6">
-                      <h2 className="text-2xl font-light tracking-wide">
+                    <div className="w-32 h-28 sm:w-24 sm:h-24 md:w-34 md:h-34 flex-shrink-0">
+                      <LottieIcon src={card.src} />
+                    </div>
+                    <div className="text-center">
+                      <h2 className="text-sm sm:text-xl md:text-2xl font-light tracking-wide">
                         {card.title}
                       </h2>
                     </div>
@@ -170,13 +172,15 @@ export default function AboutSection({ onClose }: { onClose: () => void }) {
                     layoutId={`card-${card.id}`}
                     variants={cardVariants}
                     onClick={(e) => handleSelect(e, card.id)}
-                    className="w-64 h-80 bg-[#075985]/10 select-none backdrop-blur-xl rounded-3xl flex flex-col items-center justify-center cursor-pointer"
+                    className="w-full max-w-sm sm:w-56 md:w-64 h-42 sm:h-72 md:h-80 flex-shrink-0 bg-[#075985]/10 select-none backdrop-blur-xl rounded-2xl sm:rounded-3xl flex flex-col items-center justify-center gap-2 sm:gap-4 md:gap-5 cursor-pointer"
                     whileHover={{ scale: 1.08, rotateY: 15, z: 50 }}
                     whileTap={{ scale: 0.95 }}
                   >
-                    <LottieIcon src={card.src} />
-                    <div className="text-center p-6">
-                      <h2 className="text-2xl font-light tracking-wide">
+                    <div className="w-32 h-28 sm:w-24 sm:h-24 md:w-34 md:h-34 flex-shrink-0">
+                      <LottieIcon src={card.src} />
+                    </div>
+                    <div className="text-center">
+                      <h2 className="text-sm sm:text-xl md:text-2xl font-light tracking-wide">
                         {card.title}
                       </h2>
                     </div>
@@ -192,7 +196,7 @@ export default function AboutSection({ onClose }: { onClose: () => void }) {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="mt-12"
+          className="flex-shrink-0 mt-4 sm:mt-10 md:mt-12"
         >
           <BackButton onClick={onClose} />
         </motion.div>

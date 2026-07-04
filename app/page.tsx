@@ -7,7 +7,6 @@ import LoadingScreen from "@/components/LoadingScreen";
 import AboutSection from "@/components/PageAbout";
 import { Poppins } from "next/font/google";
 
-
 const poppins = Poppins({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700", "800", "900"],
@@ -74,10 +73,19 @@ export default function Home() {
     const handleMouseMove = (e: MouseEvent) => {
       setMousePosition({ x: e.clientX, y: e.clientY });
     };
+    // Sentuhan di mobile juga bikin efek glow ikut, biar nggak cuma jalan di desktop
+    const handleTouchMove = (e: TouchEvent) => {
+      const touch = e.touches[0];
+      if (touch) {
+        setMousePosition({ x: touch.clientX, y: touch.clientY });
+      }
+    };
     window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("touchmove", handleTouchMove);
     return () => {
       clearTimeout(timer);
       window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("touchmove", handleTouchMove);
     };
   }, []);
 
@@ -126,13 +134,13 @@ export default function Home() {
                   : { scale: 1, opacity: 1 }
               }
               transition={{ duration: 0.7, ease: [0.76, 0, 0.24, 1] }}
-              className="relative z-20 flex h-full flex-col items-center justify-center text-white px-6"
+              className="relative z-20 flex h-full flex-col items-center justify-center text-white px-4 sm:px-6 md:px-10"
             >
               <motion.h1
                 variants={containerVariants}
                 initial="hidden"
                 animate="visible"
-                className="flex text-7xl md:text-[160px] font-bold tracking-[-0.05em] select-none"
+                className="flex text-5xl xs:text-6xl sm:text-7xl md:text-8xl lg:text-9xl xl:text-[160px] font-bold tracking-[-0.03em] sm:tracking-[-0.05em] select-none text-center leading-none"
               >
                 {name.split("").map((char, index) => (
                   <motion.span
@@ -149,7 +157,7 @@ export default function Home() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.8, delay: 0.5 }}
-                className="text-sm md:text-lg text-sky-200/70 mt-6 mb-12 tracking-[0.2em] uppercase font-medium select-none"
+                className="text-[11px] xs:text-xs sm:text-sm md:text-base lg:text-lg text-sky-200/70 mt-4 sm:mt-6 mb-8 sm:mb-12 tracking-[0.15em] sm:tracking-[0.2em] uppercase font-medium select-none text-center px-2"
               >
                 Full Stack Developer • Front End & Back End • Cyber Security
               </motion.p>
@@ -161,7 +169,7 @@ export default function Home() {
                 whileHover="hover"
                 whileTap="tap"
                 transition={{ delay: 0.1 }}
-                className="relative cursor-pointer overflow-hidden px-10 py-4 rounded-full border border-sky-500/30 bg-sky-950/20 backdrop-blur-md text-xs tracking-[0.2em] uppercase pointer-events-auto"
+                className="relative cursor-pointer overflow-hidden px-6 py-3 sm:px-8 sm:py-3.5 md:px-10 md:py-4 rounded-full border border-sky-500/30 bg-sky-950/20 backdrop-blur-md text-[10px] sm:text-xs tracking-[0.15em] sm:tracking-[0.2em] uppercase pointer-events-auto"
                 onClick={(e) => {
                   e.stopPropagation();
                   handleEnter();
@@ -172,7 +180,9 @@ export default function Home() {
                   variants={{ hover: { scale: [1, 1.5], opacity: [0.5, 0] } }}
                   transition={{ duration: 0.8, ease: "circOut" }}
                 />
-                <span className="relative z-10 select-none">Enter the profile</span>
+                <span className="relative z-10 select-none whitespace-nowrap">
+                  Enter the profile
+                </span>
               </motion.button>
             </motion.div>
           </motion.div>

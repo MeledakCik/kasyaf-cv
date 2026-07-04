@@ -6,12 +6,12 @@ interface LottieIconProps {
 }
 export default function LottieIcon({ src }: LottieIconProps) {
   return (
-    <div className="w-45 h-45 mb-4 flex items-center justify-center">
+    <div className="w-full h-full flex items-center justify-center">
       <DotLottieReact
         src={src}
         loop
         autoplay
-        style={{ width: "100%", height: "100%" }} 
+        style={{ width: "100%", height: "100%" }}
       />
     </div>
   );

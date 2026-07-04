@@ -27,22 +27,24 @@ export default function TemplateClient({
   };
 
   return (
-    <div className="w-full animate-in fade-in duration-500 select-none p-6 mx-auto">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-4">
+    <div className="w-full animate-in fade-in duration-500 select-none p-4 sm:p-6 mx-auto">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 sm:mb-10 gap-4">
         <div>
-          <h1 className="text-3xl font-black text-white">Template Koleksi</h1>
+          <h1 className="text-2xl sm:text-3xl font-black text-white">
+            Template Koleksi
+          </h1>
 
-          <p className="text-white/40 font-medium">
+          <p className="text-sm sm:text-base text-white/40 font-medium">
             Pilih gaya yang sesuai untuk proyek Anda
           </p>
         </div>
 
-        <div className="flex bg-[#0d1326] p-1 rounded-xl border border-white/5">
+        <div className="flex bg-[#0d1326] p-1 rounded-xl border border-white/5 overflow-x-auto max-w-full no-scrollbar">
           {FILTERS.map((cat) => (
             <button
               key={cat}
               onClick={() => handleFilterClick(cat)}
-              className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${
+              className={`shrink-0 px-3 sm:px-4 py-2 rounded-lg text-[10px] sm:text-xs font-bold uppercase tracking-wider transition-all whitespace-nowrap ${
                 activeCategory === cat
                   ? "bg-indigo-600 text-white shadow-lg"
                   : "text-white/50 hover:text-white"
@@ -54,7 +56,7 @@ export default function TemplateClient({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
         {TEMPLATES.filter(
           (t) => activeCategory === "All" || t.category === activeCategory,
         ).map((tpl) => (
@@ -63,6 +65,16 @@ export default function TemplateClient({
           </div>
         ))}
       </div>
+
+      <style jsx global>{`
+        .no-scrollbar {
+          scrollbar-width: none;
+          -ms-overflow-style: none;
+        }
+        .no-scrollbar::-webkit-scrollbar {
+          display: none;
+        }
+      `}</style>
     </div>
   );
 }
