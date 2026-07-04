@@ -113,13 +113,10 @@ export const metadata: Metadata = {
     shortcut: "/images/logo.png",
     apple: "/images/logo.png",
   },
-  // Isi kalau sudah punya kode verifikasi dari Google Search Console —
-  // ini yang bikin Google mulai crawl situsmu secara aktif.
-  // verification: {
-  //   google: "kode-verifikasi-google-search-console",
-  // },
+  verification: {
+    google: "lUs2r5wjBN7sFvbwukY7aMAMNZjGRsK9TjcxdgBe2wk",
+  },
 };
-
 const jsonLd = {
   "@context": "https://schema.org",
   "@type": "Person",
