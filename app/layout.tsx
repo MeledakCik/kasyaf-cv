@@ -93,7 +93,7 @@ export const metadata: Metadata = {
     siteName: `${NAME} Portfolio`,
     images: [
       {
-        url: `${SITE_URL}/image/logo.png`,
+        url: `${SITE_URL}/images/logo.png`,
         width: 1200,
         height: 630,
         alt: `Preview Portofolio ${NAME}`,
@@ -102,10 +102,16 @@ export const metadata: Metadata = {
     locale: "id_ID",
     type: "profile",
   },
+  twitter: {
+    card: "summary_large_image",
+    title: `${NAME} - Full Stack Developer & Cyber Security`,
+    description: "Portofolio Muhammad Kasyaf Anugrah, Full Stack Developer yang fokus di front end, back end, dan cyber security.",
+    images: ["/images/logo.png"],
+  },
   icons: {
-    icon: [{ url: "/image/logo.png", type: "image/png" }],
-    shortcut: ["/image/logo.png"],
-    apple: [{ url: "/image/logo.png" }],
+    icon: "/images/logo.png",
+    shortcut: "/images/logo.png",
+    apple: "/images/logo.png",
   },
   // Isi kalau sudah punya kode verifikasi dari Google Search Console —
   // ini yang bikin Google mulai crawl situsmu secara aktif.
@@ -119,7 +125,7 @@ const jsonLd = {
   "@type": "Person",
   name: NAME,
   url: SITE_URL,
-  image: `${SITE_URL}/image/logo.png`,
+  image: `${SITE_URL}/images/logo.png`,
   jobTitle: "Full Stack Developer",
   description:
     "Full Stack Developer yang fokus di front end, back end, dan cyber security.",
