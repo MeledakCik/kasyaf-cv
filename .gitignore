@@ -17,6 +17,10 @@
 /.next/
 /out/
 
+# Abaikan folder hasil obfuscate
+obfuscated-build/
+*.obfuscated.js
+
 # production
 /build
 
