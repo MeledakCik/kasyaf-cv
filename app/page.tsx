@@ -73,7 +73,6 @@ export default function Home() {
     const handleMouseMove = (e: MouseEvent) => {
       setMousePosition({ x: e.clientX, y: e.clientY });
     };
-    // Sentuhan di mobile juga bikin efek glow ikut, biar nggak cuma jalan di desktop
     const handleTouchMove = (e: TouchEvent) => {
       const touch = e.touches[0];
       if (touch) {

@@ -6,7 +6,6 @@ const config: Config = {
         "./components/**/*.{js,ts,jsx,tsx,mdx}",
         "./app/**/*.{js,ts,jsx,tsx,mdx}",
     ],
-    // tailwind.config.ts
     theme: {
         extend: {
             keyframes: {

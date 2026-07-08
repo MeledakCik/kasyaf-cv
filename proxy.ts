@@ -109,7 +109,6 @@ export async function proxy(request: NextRequest) {
     pathname.startsWith('/api/') ||
     pathname.includes('.')
   ) {
-    // teruskan nonce lewat request header, supaya layout.tsx bisa membacanya
     const headers = new Headers(request.headers);
     headers.set('x-nonce', nonce);
     return withCsp(NextResponse.next({ request: { headers } }));

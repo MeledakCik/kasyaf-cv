@@ -19,7 +19,6 @@ export default function CikawanShield() {
   const [isClient, setIsClient] = useState(false);
   const [showCaptcha, setShowCaptcha] = useState(false);
 
-  // Custom Hooks
   const { status, isVerifying, rayId, runVerification, setStatus } =
     useVerification();
 
@@ -43,25 +42,18 @@ export default function CikawanShield() {
     });
 
   const { isHuman, trajectory, resetTrajectory } = useMouseTracking(showCaptcha);
-
-  // Set isClient untuk menghindari hydration mismatch
   useEffect(() => {
     setIsClient(true);
   }, []);
-
-  // Initial verification
   useEffect(() => {
     runVerification({}, [], "text", null);
   }, [runVerification]);
-
-  // Generate captcha when modal opens
   useEffect(() => {
     if (showCaptcha) {
       generateCaptcha();
     }
   }, [showCaptcha, generateCaptcha]);
 
-  // Cleanup audio
   useEffect(() => {
     return cleanup;
   }, [cleanup]);

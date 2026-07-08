@@ -28,16 +28,16 @@ function TextOrb({
           size={1.5}
           height={0.5} 
           bevelEnabled={true} 
-          bevelSize={0.03} // Detail pinggiran
-          bevelThickness={0.04} // Ketebalan pinggiran
+          bevelSize={0.03}
+          bevelThickness={0.04} 
           curveSegments={32}
         >
           {text}
           <meshPhysicalMaterial
             color={color}
             emissive={color}
-            emissiveIntensity={0.2} // Diturunkan agar tidak silau
-            roughness={0.2} // Memberikan sedikit pantulan permukaan
+            emissiveIntensity={0.2} 
+            roughness={0.2} 
             metalness={0.1}
             toneMapped={false}
           />
