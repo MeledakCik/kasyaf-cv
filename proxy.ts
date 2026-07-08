@@ -63,7 +63,7 @@ function buildCsp(nonce: string): string {
   return [
     `default-src 'self'`,
     scriptSrc,
-    `style-src 'self' 'unsafe-inline'`, // dilonggarkan khusus style, bukan script
+    `style-src 'self' 'unsafe-inline'`,
     `img-src 'self' data: blob:`,
     `font-src 'self' data:`,
     `connect-src 'self' https://lottie.host https://cdn.jsdelivr.net https://unpkg.com`,
@@ -127,7 +127,7 @@ export async function proxy(request: NextRequest) {
 
   if (!isValidSession || !isFingerprintValid || isExpired) {
     const response = NextResponse.redirect(new URL('/v2/shield-verify', request.url));
-    ['__cik_clearance', 'session_id', 'device_id', 'datr', 'mid', 'dpr', 'csrftoken', '__cik_fp', '__cik_ts'].forEach(
+    ['__cik_clearance', 'session_id', 'device_id', 'surt', 'did', 'dpr', 'ckstoken', '__cik_fp', '__cik_ts'].forEach(
       (c) => response.cookies.delete(c)
     );
     return withCsp(response);

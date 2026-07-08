@@ -53,10 +53,10 @@ export async function POST(request: Request) {
   res.cookies.set('__cik_fp', fingerprint, { ...opts, maxAge: 86400 });
   res.cookies.set('__cik_ts', timestamp, { ...opts, maxAge: 86400 });
   res.cookies.set('__cik_clearance', 'true', { ...opts, maxAge: 86400 });
-  res.cookies.set('datr', randomHex(24), { ...opts, maxAge: 86400 });
-  res.cookies.set('mid', randomHex(16), { ...opts, maxAge: 86400 });
+  res.cookies.set('surt', randomHex(24), { ...opts, maxAge: 86400 });
+  res.cookies.set('did', randomHex(16), { ...opts, maxAge: 86400 });
   res.cookies.set('dpr', String(dpr || 1), { ...opts, maxAge: 86400 });
-  res.cookies.set('csrftoken', randomHex(48), { ...opts, maxAge: 86400 });
+  res.cookies.set('ckstoken', randomHex(48), { ...opts, maxAge: 86400 });
 
   return res;
 }
