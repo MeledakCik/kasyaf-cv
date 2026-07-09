@@ -29,6 +29,11 @@ const CARDS = [
   },
 ];
 
+const NAVIGATE_ROUTES: Record<string, string> = {
+  aboutme: "/profile",
+  templates: "/template",
+};
+
 const containerVariants = {
   hidden: { opacity: 0 },
   visible: {
@@ -97,11 +102,11 @@ export default function AboutSection({ onClose }: { onClose: () => void }) {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
-  const handleNavigate = (e: React.MouseEvent) => {
+  const handleNavigate = (e: React.MouseEvent, path: string) => {
     e.stopPropagation();
     setIsLoading(true);
     setTimeout(() => {
-      router.push("/template");
+      router.push(path);
     }, 800);
   };
 
@@ -143,18 +148,25 @@ export default function AboutSection({ onClose }: { onClose: () => void }) {
               transition={{ duration: 0.3 }}
               className="flex flex-col sm:flex-row sm:flex-wrap items-center justify-center gap-3 sm:gap-6 md:gap-8 z-10 w-full max-w-5xl flex-1 min-h-0 sm:flex-none"
             >
-              {CARDS.map((card) =>
-                card.id === "templates" ? (
+              {CARDS.map((card) => {
+                const navigateTo = NAVIGATE_ROUTES[card.id];
+
+                return (
                   <motion.div
                     key={card.id}
+                    layoutId={navigateTo ? undefined : `card-${card.id}`}
                     variants={cardVariants}
                     onClick={
-                      card.id === "templates"
-                        ? handleNavigate
+                      navigateTo
+                        ? (e) => handleNavigate(e, navigateTo)
                         : (e) => handleSelect(e, card.id)
                     }
                     className="w-full max-w-sm sm:w-56 md:w-64 h-42 sm:h-72 md:h-80 flex-shrink-0 bg-[#075985]/10 select-none backdrop-blur-xl rounded-2xl sm:rounded-3xl flex flex-col items-center justify-center gap-2 sm:gap-4 md:gap-5 cursor-pointer"
-                    whileHover={{ scale: 1.05 }}
+                    whileHover={
+                      navigateTo
+                        ? { scale: 1.05 }
+                        : { scale: 1.08, rotateY: 15, z: 50 }
+                    }
                     whileTap={{ scale: 0.95 }}
                   >
                     <div className="w-32 h-28 sm:w-24 sm:h-24 md:w-34 md:h-34 flex-shrink-0">
@@ -166,27 +178,8 @@ export default function AboutSection({ onClose }: { onClose: () => void }) {
                       </h2>
                     </div>
                   </motion.div>
-                ) : (
-                  <motion.div
-                    key={card.id}
-                    layoutId={`card-${card.id}`}
-                    variants={cardVariants}
-                    onClick={(e) => handleSelect(e, card.id)}
-                    className="w-full max-w-sm sm:w-56 md:w-64 h-42 sm:h-72 md:h-80 flex-shrink-0 bg-[#075985]/10 select-none backdrop-blur-xl rounded-2xl sm:rounded-3xl flex flex-col items-center justify-center gap-2 sm:gap-4 md:gap-5 cursor-pointer"
-                    whileHover={{ scale: 1.08, rotateY: 15, z: 50 }}
-                    whileTap={{ scale: 0.95 }}
-                  >
-                    <div className="w-32 h-28 sm:w-24 sm:h-24 md:w-34 md:h-34 flex-shrink-0">
-                      <LottieIcon src={card.src} />
-                    </div>
-                    <div className="text-center">
-                      <h2 className="text-sm sm:text-xl md:text-2xl font-light tracking-wide">
-                        {card.title}
-                      </h2>
-                    </div>
-                  </motion.div>
-                ),
-              )}
+                );
+              })}
             </motion.div>
           )
         )}
