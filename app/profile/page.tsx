@@ -20,7 +20,9 @@ export default function Home() {
         <div className="absolute inset-0 bg-black/40 pointer-events-none" />
 
         <Navbar />
-        <Hero />
+        <div className="p-4">
+          <Hero />
+        </div>
         <About />
         <Skills />
         <Experience />

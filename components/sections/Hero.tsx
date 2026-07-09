@@ -9,14 +9,12 @@ export default function Hero() {
   return (
     <section
       id="top"
-      className="relative flex min-h-screen items-center justify-center overflow-hidden px-6 py-20"
+      className="relative flex min-h-screen items-center justify-center overflow-hidden px-4 sm:px-6 py-20"
     >
-      <div className="absolute inset-0 bg-[#05070d]/60 z-[1]" />
-      <div className="absolute inset-0 bg-gradient-to-b from-[#0c1424]/10 via-transparent to-[#05070d]/80 pointer-events-none z-[2]" />
-
       <div className="relative z-10 container mx-auto max-w-6xl">
-        <div className="flex flex-col lg:flex-row items-center gap-10 lg:gap-20">
-          <div className="flex-1 text-center lg:text-left">
+        <div className="flex flex-col lg:flex-row items-center gap-8 lg:gap-20">
+          {/* Text Content - Always left aligned on mobile and desktop */}
+          <div className="flex-1 text-left w-full">
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -34,11 +32,12 @@ export default function Hero() {
                 Available for work
               </span>
             </motion.div>
+
             <motion.h1
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.7, delay: 0.1, ease: "easeOut" }}
-              className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl xl:text-9xl font-bold leading-[1.05] mb-3"
+              className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-bold leading-[1.05] mb-3"
               style={{ fontFamily: "'Poppins', sans-serif" }}
             >
               <span className="text-[#eaf0fb]">Muhammad</span>
@@ -47,51 +46,61 @@ export default function Hero() {
                 Kasyaf
               </span>
             </motion.h1>
+
             <motion.p
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.2, ease: "easeOut" }}
-              className="text-base sm:text-lg text-[#7c8aac] mb-2 max-w-lg mx-auto lg:mx-0 leading-relaxed"
+              className="text-base sm:text-lg text-[#7c8aac] mb-2 max-w-lg leading-relaxed"
               style={{ fontFamily: "'Poppins', sans-serif" }}
             >
               Full Stack Developer &amp; Cyber Security Enthusiast
             </motion.p>
+
             <motion.p
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.25, ease: "easeOut" }}
-              className="text-sm text-[#7c8aac]/60 max-w-lg mx-auto lg:mx-0 leading-relaxed"
+              className="text-sm text-[#7c8aac]/60 max-w-lg leading-relaxed"
               style={{ fontFamily: "'Poppins', sans-serif" }}
             >
               Building secure, scalable, and beautiful web experiences
               <br />
               <span className="text-xs">
-                B.Tech in Information Technology · Universitas Komputer Indonesia
+                B.Tech in Information Technology · Universitas Komputer
+                Indonesia
               </span>
             </motion.p>
+
             <motion.div
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.35, ease: "easeOut" }}
-              className="flex flex-wrap items-center justify-center lg:justify-start gap-2 mt-5 mb-8"
+              className="flex flex-wrap items-center justify-start gap-2 mt-5 mb-8"
             >
-              {["Full Stack", "Front End", "Back End", "Cyber Security","REST APIs","Bug Tracking"].map(
-                (tag) => (
-                  <span
-                    key={tag}
-                    className="px-3 py-1 text-[11px] rounded-full border border-[#1f2c45]/40 bg-[#101b30]/30 text-[#7c8aac]/80 backdrop-blur-sm"
-                    style={{ fontFamily: "'Poppins', sans-serif" }}
-                  >
-                    {tag}
-                  </span>
-                ),
-              )}
+              {[
+                "Full Stack",
+                "Front End",
+                "Back End",
+                "Cyber Security",
+                "REST APIs",
+                "Bug Tracking",
+              ].map((tag) => (
+                <span
+                  key={tag}
+                  className="px-3 py-1 text-[11px] rounded-full border border-[#1f2c45]/40 bg-[#101b30]/30 text-[#7c8aac]/80 backdrop-blur-sm"
+                  style={{ fontFamily: "'Poppins', sans-serif" }}
+                >
+                  {tag}
+                </span>
+              ))}
             </motion.div>
+
             <motion.div
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.45, ease: "easeOut" }}
-              className="flex flex-wrap items-center justify-center lg:justify-start gap-4"
+              className="flex flex-wrap items-center justify-start gap-4"
             >
               <Link
                 href="#about"
@@ -109,16 +118,21 @@ export default function Hero() {
                 View Projects
               </Link>
             </motion.div>
+
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.6, delay: 0.55, ease: "easeOut" }}
-              className="flex items-center justify-center lg:justify-start gap-4 mt-8"
+              className="flex items-center justify-start gap-4 mt-8"
             >
               {[
-                { icon: GitGraph,  href: "https://github.com", label: "GitHub" },
-                { icon: Link2OffIcon, href: "https://linkedin.com", label: "LinkedIn" },
-                { icon: Mail, href: "mailto:hello@kasyaf.dev", label: "Email" },
+                { icon: GitGraph, href: "https://github.com/K4K4NG", label: "GitHub" },
+                {
+                  icon: Link2OffIcon,
+                  href: "https://www.linkedin.com/in/muhammad-kasyaf-anugrah/",
+                  label: "LinkedIn",
+                },
+                { icon: Mail, href: "mailto:kakangkasyaf@gmail.com", label: "Email" },
               ].map((social) => (
                 <motion.a
                   key={social.label}
@@ -135,6 +149,8 @@ export default function Hero() {
               ))}
             </motion.div>
           </div>
+
+          {/* Profile Image - Hidden on mobile, visible on lg screens and up */}
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -143,7 +159,7 @@ export default function Hero() {
               delay: 0.2,
               ease: [0.25, 0.1, 0.25, 1],
             }}
-            className="relative flex-shrink-0"
+            className="relative flex-shrink-0 hidden lg:block"
           >
             <motion.div
               className="relative w-64 h-64 sm:w-72 sm:h-72 lg:w-80 lg:h-80 xl:w-96 xl:h-96"
@@ -193,7 +209,7 @@ export default function Hero() {
                   className="text-[11px] text-[#39e6b5]/70"
                   style={{ fontFamily: "'Poppins', sans-serif" }}
                 >
-                  🚀 4+ Years
+                  🚀 5+ Years
                 </span>
               </motion.div>
 
