@@ -21,7 +21,6 @@ export default function CikawanShield() {
     setProgress(0);
 
     try {
-      // Simulasi progress
       const progressInterval = setInterval(() => {
         setProgress((p) => Math.min(p + 5, 90));
       }, 200);
@@ -73,7 +72,6 @@ export default function CikawanShield() {
       className={`${poppins.className} min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center p-6`}
     >
       <div className="w-full max-w-md rounded-2xl bg-white shadow-xl border border-slate-200 overflow-hidden animate-in fade-in duration-500">
-        {/* Header */}
         <div className="bg-slate-900 px-6 py-5 flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
             {status === "failed" ? (
@@ -83,17 +81,20 @@ export default function CikawanShield() {
             )}
           </div>
           <div>
-            <h1 className="text-white text-lg font-semibold">Portfolio Kasyaf</h1>
-            <p className="text-slate-400 text-xs">Verifikasi Keamanan</p>
+            <h1 className="text-white text-lg font-semibold">
+              Portfolio Kasyaf
+            </h1>
+            <p className="text-slate-400 text-xs">Validasi Keamanan</p>
           </div>
         </div>
 
-        {/* Body */}
         <div className="px-6 py-8">
           {status !== "failed" ? (
             <>
               <h2 className="text-xl font-semibold text-slate-800">
-                {status === "solving" ? "Memverifikasi perangkat Anda" : "Memproses verifikasi"}
+                {status === "solving"
+                  ? "Memvalidasi perangkat Anda"
+                  : "Memproses validasi"}
               </h2>
               <p className="text-slate-500 text-sm mt-1 leading-relaxed">
                 {status === "solving"
@@ -103,7 +104,10 @@ export default function CikawanShield() {
 
               <div className="mt-6">
                 <div className="flex items-center gap-4">
-                  <Loader2 size={24} className="text-blue-600 animate-spin shrink-0" />
+                  <Loader2
+                    size={24}
+                    className="text-blue-600 animate-spin shrink-0"
+                  />
                   <div className="flex-1">
                     <div className="h-1.5 rounded-full bg-slate-200 overflow-hidden">
                       <div
@@ -112,32 +116,40 @@ export default function CikawanShield() {
                       />
                     </div>
                     <p className="text-xs text-slate-400 mt-1.5">
-                      {progress < 100 ? "Proses otomatis, mohon tunggu..." : "Selesai, mengalihkan..."}
+                      {progress < 100
+                        ? "Proses otomatis, mohon tunggu..."
+                        : "Selesai, mengalihkan..."}
                     </p>
                   </div>
                 </div>
               </div>
-
               <div className="mt-6 rounded-xl bg-blue-50 border border-blue-100 px-4 py-3">
                 <p className="text-xs text-blue-700 leading-relaxed">
-                  <span className="font-semibold">🛡️ Otomatis & Aman</span> — Verifikasi ini berlangsung otomatis.
-                  Anda akan dialihkan setelah selesai. Tidak perlu tindakan tambahan.
+                  <span className="font-semibold">🛡️ Validasi Otomatis</span>{" "}
+                  — Proses ini berlangsung otomatis untuk memastikan keamanan
+                  koneksi Anda. Anda akan dialihkan setelah selesai.
                 </p>
               </div>
             </>
           ) : (
             <>
-              <h2 className="text-xl font-semibold text-red-600">Verifikasi gagal</h2>
+              <h2 className="text-xl font-semibold text-red-600">
+                Validasi gagal
+              </h2>
               <p className="text-slate-500 text-sm mt-1 leading-relaxed">
-                Kami tidak dapat memverifikasi perangkat Anda. Ini bisa terjadi karena koneksi lambat,
-                browser yang tidak didukung, atau terdeteksinya akses otomatis.
+                Kami tidak dapat memverifikasi perangkat Anda. Ini bisa terjadi
+                karena koneksi lambat, browser yang tidak didukung, atau
+                terdeteksinya akses otomatis.
               </p>
 
               <div className="mt-4 rounded-xl bg-red-50 border border-red-100 px-4 py-3 flex items-start gap-3">
-                <ShieldAlert size={18} className="text-red-500 shrink-0 mt-0.5" />
+                <ShieldAlert
+                  size={18}
+                  className="text-red-500 shrink-0 mt-0.5"
+                />
                 <p className="text-xs text-red-700 leading-relaxed">
-                  Coba refresh halaman. Jika terus terjadi, nonaktifkan ekstensi browser atau
-                  gunakan browser lain.
+                  Coba refresh halaman. Jika terus terjadi, nonaktifkan ekstensi
+                  browser atau gunakan browser lain.
                 </p>
               </div>
 
@@ -152,8 +164,8 @@ export default function CikawanShield() {
         </div>
 
         <div className="border-t bg-slate-50 px-6 py-3 flex justify-between text-[10px] text-slate-400">
-          <span>Verifikasi v2.0</span>
-          <span>Portfolio Kasyaf</span>
+          <span>Keamanan Tervalidasi</span>
+          <span>© {new Date().getFullYear()} Kasyaf</span>
         </div>
       </div>
     </div>
