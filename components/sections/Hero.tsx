@@ -13,7 +13,6 @@ export default function Hero() {
     >
       <div className="relative z-10 container mx-auto max-w-6xl">
         <div className="flex flex-col lg:flex-row items-center gap-8 lg:gap-20">
-          {/* Text Content - Always left aligned on mobile and desktop */}
           <div className="flex-1 text-left w-full">
             <motion.div
               initial={{ opacity: 0, y: 10 }}
@@ -149,8 +148,6 @@ export default function Hero() {
               ))}
             </motion.div>
           </div>
-
-          {/* Profile Image - Hidden on mobile, visible on lg screens and up */}
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
