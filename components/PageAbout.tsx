@@ -52,6 +52,7 @@ const cardVariants = {
     transition: { type: "spring", stiffness: 80, damping: 12, mass: 1 },
   },
 } as const;
+
 const BackButton = ({ onClick }: { onClick: () => void }) => {
   const text = "back to the beginning".split("");
   return (
@@ -161,19 +162,37 @@ export default function AboutSection({ onClose }: { onClose: () => void }) {
                         ? (e) => handleNavigate(e, navigateTo)
                         : (e) => handleSelect(e, card.id)
                     }
-                    className="w-full max-w-sm sm:w-56 md:w-64 h-42 sm:h-72 md:h-80 flex-shrink-0 bg-[#075985]/10 select-none backdrop-blur-xl rounded-2xl sm:rounded-3xl flex flex-col items-center justify-center gap-2 sm:gap-4 md:gap-5 cursor-pointer"
+                    className="w-full max-w-sm sm:w-56 md:w-64 h-42 sm:h-72 md:h-80 flex-shrink-0 bg-white/5 backdrop-blur-xl rounded-2xl sm:rounded-3xl flex flex-col items-center justify-center gap-2 sm:gap-4 md:gap-5 cursor-pointer border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.3)]"
                     whileHover={
                       navigateTo
-                        ? { scale: 1.05 }
-                        : { scale: 1.08, rotateY: 15, z: 50 }
+                        ? {
+                            scale: 1.05,
+                            backgroundColor: "rgba(255,255,255,0.1)",
+                            borderColor: "rgba(255,255,255,0.2)",
+                            boxShadow: "0 8px 40px rgba(0,0,0,0.4)",
+                          }
+                        : {
+                            scale: 1.08,
+                            rotateY: 15,
+                            z: 50,
+                            backgroundColor: "rgba(255,255,255,0.1)",
+                            borderColor: "rgba(255,255,255,0.2)",
+                            boxShadow: "0 8px 40px rgba(0,0,0,0.4)",
+                          }
                     }
                     whileTap={{ scale: 0.95 }}
+                    style={{
+                      background: "rgba(255, 255, 255, 0.08)",
+                      backdropFilter: "blur(20px)",
+                      WebkitBackdropFilter: "blur(20px)",
+                      border: "1px solid rgba(255, 255, 255, 0.15)",
+                    }}
                   >
-                    <div className="w-32 h-28 sm:w-24 sm:h-24 md:w-34 md:h-34 flex-shrink-0">
+                    <div className="w-32 h-28 sm:w-24 sm:h-24 md:w-34 md:h-34 flex-shrink-0 opacity-90">
                       <LottieIcon src={card.src} />
                     </div>
                     <div className="text-center">
-                      <h2 className="text-sm sm:text-xl md:text-2xl font-light tracking-wide">
+                      <h2 className="text-sm sm:text-xl md:text-2xl font-light tracking-wide text-white/90 drop-shadow-lg">
                         {card.title}
                       </h2>
                     </div>
