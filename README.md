@@ -1,4 +1,3 @@
-```markdown
 # Muhammad Kasyaf - Portfolio Website
 
 > **Personal portfolio website** showcasing my journey as a Full Stack Developer & Cyber Security Enthusiast. Built with Next.js 15, TypeScript, Tailwind CSS, and Framer Motion.
@@ -133,4 +132,3 @@ Poppins font is loaded via Next.js Font Optimization. To change the font, update
 
 *Made with ❤️ by [Muhammad Kasyaf](https://github.com/kasyaf)*
 *Building secure, scalable, and beautiful web experiences.*
-```
