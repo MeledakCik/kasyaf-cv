@@ -25,7 +25,8 @@ export default function ProjectLayout({
     } else {
       folders = ["deteksi", "rencana", "pengerjaan"];
     }
-  } catch {
+  } catch (error) {
+    console.error("Gagal membaca direktori project:", error);
     folders = ["deteksi", "rencana", "pengerjaan"];
   }
 
@@ -38,7 +39,9 @@ export default function ProjectLayout({
   });
 
   return (
-    <div className={`${poppins.className} select-none flex h-screen overflow-hidden bg-[#0a0e1a] text-[#e2e8f0]`}>
+    <div
+      className={`${poppins.className} flex h-screen overflow-hidden bg-[#0a0e1a] text-[#e2e8f0]`}
+    >
       <Sidebar menuItems={menuItems} />
       <main className="flex-1 h-full overflow-y-auto p-4 lg:p-6 bg-gradient-to-br from-[#0a0e1a] via-[#111827] to-[#0a0e1a]">
         <div className="max-w-7xl mx-auto">{children}</div>

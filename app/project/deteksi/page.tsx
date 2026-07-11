@@ -18,7 +18,6 @@ export default function DeteksiPage() {
   } catch {
     subFolders = [];
   }
-
   return (
     <div className="p-4">
       <div className="mb-8">
@@ -31,7 +30,12 @@ export default function DeteksiPage() {
       {subFolders.length === 0 ? (
         <div className="flex flex-col items-center justify-center p-12 bg-[#1a1f2e]/30 rounded-2xl border border-dashed border-[#2a2f3e]">
           <FolderOpen className="w-12 h-12 text-[#64748b] mb-3" />
-          <p className="text-[#94a3b8]">Belum ada sub‑folder. Buat di <code className="bg-[#0a0e1a] px-2 py-1 rounded">project/deteksi/</code></p>
+          <p className="text-[#94a3b8] text-center">
+            Belum ada sub‑folder. Buat folder di <br />
+            <code className="bg-[#0a0e1a] px-2 py-1 rounded text-sm">project/deteksi/</code>
+            <br />
+            <span className="text-xs text-[#64748b]">(pastikan folder di‑commit ke Git)</span>
+          </p>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -54,7 +58,6 @@ export default function DeteksiPage() {
                   <FolderOpen className="w-5 h-5 text-purple-400" />
                 </div>
               </div>
-              {/* Glow effect */}
               <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-purple-500/0 via-purple-500/5 to-indigo-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
             </Link>
           ))}
