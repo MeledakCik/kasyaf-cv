@@ -1,7 +1,9 @@
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 @custom-variant dark (&:is(.dark *));
 
@@ -129,5 +131,200 @@
   }
   html {
     @apply font-sans;
+  }
+}
+
+
+@layer components {
+  .glow-text {
+    @apply text-[#dcc8ff] font-light tracking-[3px] 
+           bg-[rgba(10,5,30,0.5)] px-4 sm:px-7 py-1.5 sm:py-2.5 rounded-full backdrop-blur-sm 
+           border border-[rgba(200,150,255,0.15)] 
+           shadow-[0_0_30px_rgba(150,80,255,0.4)];
+  }
+  
+  .sub-text {
+    @apply text-[rgba(200,180,255,0.35)] text-[10px] sm:text-xs tracking-[4px] 
+           bg-[rgba(10,5,30,0.4)] px-2 sm:px-4 py-0.5 sm:py-1 rounded-3xl backdrop-blur-sm;
+  }
+  
+  .upload-box {
+    @apply w-full bg-[rgba(10,5,30,0.6)] backdrop-blur-md p-2 sm:p-3 md:p-4 rounded-2xl sm:rounded-3xl 
+           border border-[rgba(200,150,255,0.12)] 
+           shadow-[0_8px_40px_rgba(0,0,0,0.5)] flex flex-col gap-1.5 sm:gap-2 md:gap-3;
+  }
+  
+  .source-selector {
+    @apply flex gap-0.5 sm:gap-1 bg-[rgba(255,255,255,0.03)] rounded-[30px] sm:rounded-[40px] p-0.5 sm:p-1 
+           border border-[rgba(200,150,255,0.08)];
+  }
+  
+  .source-btn {
+    @apply flex-1 px-1.5 sm:px-2 md:px-3 py-1 sm:py-1.5 rounded-3xl border-none bg-transparent 
+           text-[rgba(200,180,255,0.5)] font-semibold text-[8px] sm:text-[10px] md:text-xs 
+           transition-all duration-300 font-sans tracking-wide cursor-pointer;
+  }
+  
+  .source-btn.active {
+    @apply bg-[rgba(160,100,255,0.2)] text-white 
+           shadow-[0_0_20px_rgba(160,100,255,0.15)];
+  }
+  
+  .source-btn:hover {
+    @apply text-[#d4c8ff];
+  }
+  
+  .input-wrapper {
+    @apply flex flex-col gap-1 sm:gap-1.5;
+  }
+  
+  .input-wrapper input[type="file"],
+  .input-wrapper input[type="text"] {
+    @apply w-full px-2 sm:px-3 py-1.5 sm:py-2 rounded-xl bg-[rgba(255,255,255,0.04)] 
+           border border-[rgba(200,150,255,0.15)] text-[#d4c8ff] text-[8px] sm:text-[10px] md:text-xs 
+           font-sans outline-none transition-all duration-300;
+  }
+  
+  .input-wrapper input:focus {
+    @apply border-purple-500;
+  }
+  
+  .url-hint {
+    @apply text-[6px] sm:text-[8px] text-[rgba(200,180,255,0.3)] text-left pl-1;
+  }
+  
+  .convert-btn {
+    @apply bg-gradient-to-br from-purple-600 to-purple-500 border-none px-2 sm:px-3 py-1.5 sm:py-2 
+           rounded-xl text-white font-semibold text-[8px] sm:text-[10px] md:text-xs cursor-pointer 
+           transition-all duration-300 font-sans w-full;
+  }
+  
+  .convert-btn:hover {
+    @apply scale-105 shadow-[0_0_25px_rgba(160,100,255,0.4)];
+  }
+  
+  .convert-btn:disabled {
+    @apply opacity-50 cursor-not-allowed;
+  }
+  
+  .checkbox-row {
+    @apply flex items-center gap-1.5 sm:gap-2 text-[#c8b8ff] text-[8px] sm:text-[10px] md:text-xs justify-start py-0.5 sm:py-1;
+  }
+  
+  .checkbox-row input[type="checkbox"] {
+    @apply w-3 h-3 sm:w-4 sm:h-4 accent-purple-500 cursor-pointer;
+  }
+  
+  .upload-btn {
+    @apply bg-gradient-to-br from-purple-500 to-purple-600 border-none px-2 sm:px-3 py-1.5 sm:py-2.5 
+           rounded-2xl text-white font-bold text-[10px] sm:text-xs md:text-sm 
+           cursor-pointer shadow-[0_8px_30px_rgba(120,60,255,0.4)] 
+           transition-all duration-300 uppercase w-full;
+  }
+  
+  .upload-btn:hover {
+    @apply scale-105 shadow-[0_12px_40px_rgba(140,80,255,0.6)];
+  }
+  
+  .mode-item {
+    @apply px-1 sm:px-2 py-0.5 sm:py-1 rounded-3xl text-[7px] sm:text-[10px] font-bold tracking-wider 
+           text-[rgba(200,180,255,0.4)] bg-transparent border border-transparent 
+           transition-all duration-300 cursor-pointer uppercase font-sans;
+  }
+  
+  .mode-item.active {
+    @apply text-white bg-[rgba(160,100,255,0.25)] border-purple-500 
+           shadow-[0_0_20px_rgba(160,100,255,0.2)];
+  }
+  
+  .mode-item .sub {
+    @apply text-[5px] sm:text-[8px] opacity-50 block font-light;
+  }
+  
+  .media-btn {
+    @apply bg-[rgba(255,255,255,0.05)] border border-[rgba(200,180,255,0.12)] 
+           text-[#d4c8ff] px-1.5 sm:px-3 py-0.5 sm:py-1 rounded-[30px] sm:rounded-[40px] 
+           text-[8px] sm:text-[10px] md:text-xs font-semibold tracking-wider 
+           cursor-pointer transition-all duration-300 font-sans flex items-center gap-0.5 sm:gap-1.5 
+           whitespace-nowrap;
+  }
+  
+  .media-btn:hover {
+    @apply bg-[rgba(160,100,255,0.2)] border-purple-500 
+           shadow-[0_0_20px_rgba(160,100,255,0.2)];
+  }
+  
+  .media-btn .icon {
+    @apply text-[10px] sm:text-sm;
+  }
+}
+
+@layer utilities {
+  .hidden\:xs\:inline {
+    @media (min-width: 480px) {
+      display: inline !important;
+    }
+  }
+  
+  .block\:xs\:hidden {
+    @media (min-width: 480px) {
+      display: none !important;
+    }
+  }
+}
+
+/* Responsive untuk mobile */
+@media (max-width: 480px) {
+  .glow-text {
+    font-size: 11px !important;
+    padding: 4px 10px !important;
+  }
+  
+  .upload-box {
+    padding: 6px !important;
+    gap: 4px !important;
+  }
+  
+  .source-btn {
+    font-size: 7px !important;
+    padding: 3px 5px !important;
+  }
+  
+  .upload-btn {
+    font-size: 9px !important;
+    padding: 4px 8px !important;
+  }
+  
+  .media-btn {
+    font-size: 7px !important;
+    padding: 3px 6px !important;
+  }
+  
+  .media-btn .icon {
+    font-size: 8px !important;
+  }
+  
+  .mode-item {
+    font-size: 6px !important;
+    padding: 1px 4px !important;
+  }
+  
+  #infoDisplay {
+    font-size: 5px !important;
+    padding: 2px 4px !important;
+  }
+  
+  .bpm-badge {
+    font-size: 7px !important;
+    padding: 2px 8px !important;
+  }
+  
+  .bpm-badge span {
+    font-size: 10px !important;
+  }
+  
+  .formula-box {
+    font-size: 7px !important;
+    padding: 2px 6px !important;
   }
 }

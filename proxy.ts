@@ -58,9 +58,10 @@ function generateNonce(): string {
   crypto.getRandomValues(bytes);
   return btoa(String.fromCharCode(...bytes));
 }
-
 function buildCsp(nonce: string): string {
   const isDev = process.env.NODE_ENV !== 'production';
+  const backendUrl = process.env.BACKEND_URL || 'http://localhost:8000';
+  const mediaSrc = `'self' ${backendUrl} http://localhost:8000`;
 
   const scriptSrc = isDev
     ? `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' 'wasm-unsafe-eval' 'unsafe-eval'`
@@ -72,7 +73,8 @@ function buildCsp(nonce: string): string {
     `style-src 'self' 'unsafe-inline'`,
     `img-src 'self' data: blob:`,
     `font-src 'self' data:`,
-    `connect-src 'self' https://lottie.host https://cdn.jsdelivr.net https://unpkg.com`,
+    `media-src ${mediaSrc}`,
+    `connect-src 'self' ${backendUrl} https://lottie.host https://cdn.jsdelivr.net https://unpkg.com`,
     `worker-src 'self' blob:`,
     `frame-ancestors 'none'`,
     `base-uri 'self'`,
