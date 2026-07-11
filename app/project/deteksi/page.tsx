@@ -1,23 +1,11 @@
-// app/project/deteksi/page.tsx
-import fs from "fs";
-import path from "path";
 import Link from "next/link";
 import { FolderOpen, ArrowRight } from "lucide-react";
+import { getProjectData } from "@/lib/projectData";
 
 export default function DeteksiPage() {
-  const subDir = path.join(process.cwd(), "project", "deteksi");
-  let subFolders: string[] = [];
+  const data = getProjectData();
+  const subFolders = data.subFolders["deteksi"] || [];
 
-  try {
-    if (fs.existsSync(subDir)) {
-      subFolders = fs
-        .readdirSync(subDir, { withFileTypes: true })
-        .filter((dirent) => dirent.isDirectory())
-        .map((dirent) => dirent.name);
-    }
-  } catch {
-    subFolders = [];
-  }
   return (
     <div className="p-4">
       <div className="mb-8">
@@ -33,8 +21,9 @@ export default function DeteksiPage() {
           <p className="text-[#94a3b8] text-center">
             Belum ada sub‑folder. Buat folder di <br />
             <code className="bg-[#0a0e1a] px-2 py-1 rounded text-sm">project/deteksi/</code>
-            <br />
-            <span className="text-xs text-[#64748b]">(pastikan folder di‑commit ke Git)</span>
+          </p>
+          <p className="text-xs text-[#64748b] mt-2">
+            (setelah membuat, deploy ulang ke Vercel)
           </p>
         </div>
       ) : (

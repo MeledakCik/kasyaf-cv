@@ -1,28 +1,16 @@
-import fs from "fs";
-import path from "path";
+// app/project/rencana/page.tsx
 import Link from "next/link";
 import { FolderOpen, ArrowRight } from "lucide-react";
+import { getProjectData } from "@/lib/projectData";
 
-export default function DeteksiPage() {
-  const subDir = path.join(process.cwd(), "project", "rencana");
-  let subFolders: string[] = [];
-
-  try {
-    if (fs.existsSync(subDir)) {
-      subFolders = fs
-        .readdirSync(subDir, { withFileTypes: true })
-        .filter((dirent) => dirent.isDirectory())
-        .map((dirent) => dirent.name);
-    }
-  } catch {
-    subFolders = [];
-  }
+export default function RencanaPage() {
+  const data = getProjectData();
+  const subFolders = data.subFolders["rencana"] || [];
 
   return (
     <div className="p-4">
-      {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-400 to-indigo-400 bg-clip-text text-transparent inline-block">
+        <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent inline-block">
           Rencana
         </h1>
         <p className="text-[#94a3b8] mt-1">Pilih salah satu sub‑proyek di bawah</p>
@@ -31,7 +19,10 @@ export default function DeteksiPage() {
       {subFolders.length === 0 ? (
         <div className="flex flex-col items-center justify-center p-12 bg-[#1a1f2e]/30 rounded-2xl border border-dashed border-[#2a2f3e]">
           <FolderOpen className="w-12 h-12 text-[#64748b] mb-3" />
-          <p className="text-[#94a3b8]">Belum ada sub‑folder. Buat di <code className="bg-[#0a0e1a] px-2 py-1 rounded">project/deteksi/</code></p>
+          <p className="text-[#94a3b8] text-center">
+            Belum ada sub‑folder. Buat folder di <br />
+            <code className="bg-[#0a0e1a] px-2 py-1 rounded text-sm">project/rencana/</code>
+          </p>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -39,23 +30,22 @@ export default function DeteksiPage() {
             <Link
               key={folder}
               href={`/project/rencana/${folder}`}
-              className="group relative bg-[#1a1f2e]/60 backdrop-blur-sm p-6 rounded-2xl border border-[#2a2f3e]/50 hover:border-purple-400/40 transition-all duration-300 hover:shadow-xl hover:shadow-purple-500/5 hover:-translate-y-1"
+              className="group relative bg-[#1a1f2e]/60 backdrop-blur-sm p-6 rounded-2xl border border-[#2a2f3e]/50 hover:border-blue-400/40 transition-all duration-300 hover:shadow-xl hover:shadow-blue-500/5 hover:-translate-y-1"
             >
               <div className="flex items-start justify-between">
                 <div>
-                  <h2 className="text-xl font-semibold capitalize text-white group-hover:text-purple-300 transition">
+                  <h2 className="text-xl font-semibold capitalize text-white group-hover:text-blue-300 transition">
                     {folder}
                   </h2>
                   <p className="text-sm text-[#94a3b8] mt-1 flex items-center gap-1">
                     Lihat detail <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                   </p>
                 </div>
-                <div className="p-2 bg-purple-500/10 rounded-xl group-hover:bg-purple-500/20 transition">
-                  <FolderOpen className="w-5 h-5 text-purple-400" />
+                <div className="p-2 bg-blue-500/10 rounded-xl group-hover:bg-blue-500/20 transition">
+                  <FolderOpen className="w-5 h-5 text-blue-400" />
                 </div>
               </div>
-              {/* Glow effect */}
-              <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-purple-500/0 via-purple-500/5 to-indigo-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-blue-500/0 via-blue-500/5 to-cyan-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
             </Link>
           ))}
         </div>

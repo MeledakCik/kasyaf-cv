@@ -1,7 +1,7 @@
+// app/project/layout.tsx
 import { Poppins } from "next/font/google";
 import Sidebar from "./Sidebar";
-import fs from "fs";
-import path from "path";
+import { getProjectData } from "@/lib/projectData";
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -13,24 +13,8 @@ export default function ProjectLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const projectDir = path.join(process.cwd(), "project");
-  let folders: string[] = [];
-
-  try {
-    if (fs.existsSync(projectDir)) {
-      folders = fs
-        .readdirSync(projectDir, { withFileTypes: true })
-        .filter((dirent) => dirent.isDirectory())
-        .map((dirent) => dirent.name);
-    } else {
-      folders = ["deteksi", "rencana", "pengerjaan"];
-    }
-  } catch (error) {
-    console.error("Gagal membaca direktori project:", error);
-    folders = ["deteksi", "rencana", "pengerjaan"];
-  }
-
-  const menuItems = folders.map((name) => {
+  const data = getProjectData();
+  const menuItems = data.menu.map((name) => {
     let status: "done" | "planned" | "wip" = "planned";
     if (name === "deteksi") status = "done";
     else if (name === "rencana") status = "planned";
