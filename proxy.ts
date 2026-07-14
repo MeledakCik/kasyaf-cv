@@ -74,7 +74,7 @@ function buildCsp(nonce: string): string {
     `img-src 'self' data: blob:`,
     `font-src 'self' data:`,
     `media-src ${mediaSrc}`,
-    `connect-src 'self' ${backendUrl} https://lottie.host https://cdn.jsdelivr.net https://unpkg.com`,
+    `connect-src 'self' ${backendUrl} https://lottie.host https://cdn.jsdelivr.net https://unpkg.com https://huggingface.co https://*.huggingface.co https://raw.githubusercontent.com https://*.githubusercontent.com https://*.hf.co`,
     `worker-src 'self' blob:`,
     `frame-ancestors 'none'`,
     `base-uri 'self'`,

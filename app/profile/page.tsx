@@ -9,10 +9,12 @@ import Experience from "@/components/sections/Experience";
 import Projects from "@/components/sections/Projects";
 import Contact from "@/components/sections/Contact";
 import Footer from "@/components/sections/Footer";
+import AIBrain from "@/components/AIBrain";
 
 export default function Home() {
   return (
     <main className="relative min-h-screen bg-black text-[#eaf0fb] overflow-x-hidden">
+      <AIBrain />
       <div className="fixed inset-0 z-0">
         <StarfieldCanvas />
       </div>
