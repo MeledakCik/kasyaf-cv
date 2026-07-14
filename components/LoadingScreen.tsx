@@ -8,7 +8,7 @@ export default function LoadingScreen() {
       initial={{ opacity: 1 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0, transition: { duration: 0.5, ease: "easeInOut" } }}
-      className="fixed inset-0 z-[9999] flex items-center justify-center bg-[#050508]" // Samakan warna background dengan aplikasi Anda
+      className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-[#050508]"
     >
       <div className="w-64 h-64">
         <DotLottieReact
@@ -17,6 +17,9 @@ export default function LoadingScreen() {
           autoplay
         />
       </div>
+      <p className="text-sky-200/50 text-xs tracking-[0.3em] uppercase font-light mt-4">
+        Loading...
+      </p>
     </motion.div>
   );
 }
