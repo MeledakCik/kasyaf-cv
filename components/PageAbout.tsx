@@ -7,9 +7,6 @@ import { useRouter } from "next/navigation";
 import LoadingScreen from "@/components/LoadingScreen";
 import { RippleButton } from "./ui/ripple-button";
 
-// ==========================================
-// 🎨 ICON CUSTOM (buatan sendiri)
-// ==========================================
 const AboutIcon = () => (
   <svg
     viewBox="0 0 24 24"
@@ -57,9 +54,6 @@ const ExperienceIcon = () => (
   </svg>
 );
 
-// ==========================================
-// KONFIGURASI CARD
-// ==========================================
 const CARDS = [
   {
     id: "aboutme",
@@ -86,9 +80,6 @@ const NAVIGATE_ROUTES: Record<string, string> = {
   templates: "/template",
 };
 
-// ==========================================
-// ANIMASI VARIANTS
-// ==========================================
 const containerVariants = {
   hidden: { opacity: 0 },
   visible: {
@@ -108,9 +99,6 @@ const cardVariants = {
   },
 } as const;
 
-// ==========================================
-// BACK BUTTON
-// ==========================================
 const BackButton = ({ onClick }: { onClick: () => void }) => {
   const text = "back to the beginning".split("");
   return (
@@ -156,9 +144,6 @@ const BackButton = ({ onClick }: { onClick: () => void }) => {
   );
 };
 
-// ==========================================
-// MAIN COMPONENT
-// ==========================================
 export default function AboutSection({ onClose }: { onClose: () => void }) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -179,7 +164,6 @@ export default function AboutSection({ onClose }: { onClose: () => void }) {
 
   return (
     <main className="relative select-none h-dvh w-full text-white flex flex-col items-center justify-center overflow-hidden px-4 py-3 sm:px-6 sm:py-12">
-      {/* Background */}
       <motion.div
         className="fixed inset-0 pointer-events-none -z-10"
         initial={{ opacity: 0 }}

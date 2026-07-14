@@ -39,14 +39,10 @@ export default function Home() {
     setShowAbout(false);
     setIsTransitioning(false);
   }, []);
-
-  // 🟢 Loading hanya 1 detik
   useEffect(() => {
     const timer = setTimeout(() => setIsLoading(false), 1000);
     return () => clearTimeout(timer);
   }, []);
-
-  // Mouse effect
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       document.documentElement.style.setProperty('--x', e.clientX + 'px');
@@ -60,7 +56,6 @@ export default function Home() {
     <main
       className={`${poppins.className} bg-black relative min-h-screen w-full overflow-hidden`}
     >
-      {/* BackgroundCanvas tetap di belakang, meskipun loading */}
       <motion.div
         className="fixed inset-0"
         animate={
@@ -122,7 +117,7 @@ export default function Home() {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-            className="fixed inset-0 z-50 select-none"
+            className="fixed inset-0 z-50 bg-black select-none"
           >
             <AboutSection onClose={handleClose} />
           </motion.div>
