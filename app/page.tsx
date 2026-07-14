@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import dynamic from "next/dynamic";
 import { AnimatePresence, motion } from "framer-motion";
 import { Poppins } from "next/font/google";
-import LoadingScreen from "@/components/LoadingScreen"; // 👈 Import langsung (bukan dynamic)
+import LoadingScreen from "@/components/LoadingScreen";
 
 const BackgroundCanvas = dynamic(
   () => import("@/components/BackgroundCanvas"),
@@ -39,17 +39,19 @@ export default function Home() {
     setShowAbout(false);
     setIsTransitioning(false);
   }, []);
+
   useEffect(() => {
     const timer = setTimeout(() => setIsLoading(false), 1000);
     return () => clearTimeout(timer);
   }, []);
+
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      document.documentElement.style.setProperty('--x', e.clientX + 'px');
-      document.documentElement.style.setProperty('--y', e.clientY + 'px');
+      document.documentElement.style.setProperty("--x", e.clientX + "px");
+      document.documentElement.style.setProperty("--y", e.clientY + "px");
     };
-    window.addEventListener('mousemove', handler);
-    return () => window.removeEventListener('mousemove', handler);
+    window.addEventListener("mousemove", handler);
+    return () => window.removeEventListener("mousemove", handler);
   }, []);
 
   return (
@@ -96,14 +98,14 @@ export default function Home() {
               transition={{ duration: 0.7, ease: [0.76, 0, 0.24, 1] }}
               className="relative z-20 flex h-full flex-col items-center justify-center text-white px-4"
             >
-              <h1 className="text-5xl md:text-[160px] font-bold tracking-[-0.05em] text-center leading-none select-none">
+              <h1 className="text-[clamp(3.5rem,12vw,160px)] font-bold tracking-[-0.05em] text-center leading-none select-none">
                 KASYAF
               </h1>
-              <p className="text-xs md:text-lg text-sky-200/70 mt-6 mb-12 tracking-[0.2em] uppercase font-medium text-center">
+              <p className="text-base md:text-lg text-sky-200/70 mt-6 mb-12 tracking-[0.2em] uppercase font-medium text-center">
                 Full Stack Developer • Cyber Security
               </p>
               <button
-                className="relative cursor-pointer px-10 py-4 rounded-full border border-sky-500/30 bg-sky-950/20 backdrop-blur-md text-xs tracking-[0.2em] uppercase pointer-events-auto hover:border-sky-500/80 transition-all"
+                className="relative cursor-pointer px-8 py-3 md:px-10 md:py-4 rounded-full border border-sky-500/30 bg-sky-950/20 backdrop-blur-md text-sm md:text-base tracking-[0.2em] uppercase pointer-events-auto hover:border-sky-500/80 transition-all"
                 onClick={handleEnter}
               >
                 Enter the profile
