@@ -118,9 +118,6 @@ export const metadata: Metadata = {
   verification: {
     google: "lUs2r5wjBN7sFvbwukY7aMAMNZjGRsK9TjcxdgBe2wk",
   },
-  other: {
-    charSet: 'utf-8',
-  },
 };
 const jsonLd = {
   "@context": "https://schema.org",
