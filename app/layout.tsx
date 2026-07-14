@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
+import { headers } from "next/headers";
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -145,14 +146,15 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const nonce = (await headers()).get("x-nonce") ?? "";
   return (
     <html
       lang="id"
       className={`${geistSans.variable} ${geistMono.variable} h-full bg-black antialiased`}
     >
       <head>
-        <meta charSet="utf-8" />
         <Script
+          nonce={nonce}
           id="person-jsonld"
           type="application/ld+json"
           dangerouslySetInnerHTML={{
