@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import LoadingScreen from "@/components/LoadingScreen";
 import { RippleButton } from "./ui/ripple-button";
 
+// Ikon (tetap sama, hanya ukuran responsif)
 const AboutIcon = () => (
   <svg
     viewBox="0 0 24 24"
@@ -15,7 +16,7 @@ const AboutIcon = () => (
     strokeWidth="1.5"
     strokeLinecap="round"
     strokeLinejoin="round"
-    className="w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 text-white/80"
+    className="w-14 h-14 sm:w-20 sm:h-20 md:w-24 md:h-24 text-white/80"
   >
     <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
     <circle cx="12" cy="7" r="4" />
@@ -30,7 +31,7 @@ const TemplatesIcon = () => (
     strokeWidth="1.5"
     strokeLinecap="round"
     strokeLinejoin="round"
-    className="w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 text-white/80"
+    className="w-14 h-14 sm:w-20 sm:h-20 md:w-24 md:h-24 text-white/80"
   >
     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
     <polyline points="14 2 14 8 20 8" />
@@ -48,31 +49,16 @@ const ExperienceIcon = () => (
     strokeWidth="1.5"
     strokeLinecap="round"
     strokeLinejoin="round"
-    className="w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 text-white/80"
+    className="w-14 h-14 sm:w-20 sm:h-20 md:w-24 md:h-24 text-white/80"
   >
     <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
   </svg>
 );
 
 const CARDS = [
-  {
-    id: "aboutme",
-    title: "About Me",
-    content: "Informasi detail tentang saya...",
-    icon: <AboutIcon />,
-  },
-  {
-    id: "templates",
-    title: "Templates",
-    content: "Daftar koleksi template saya",
-    icon: <TemplatesIcon />,
-  },
-  {
-    id: "experience",
-    title: "Experience",
-    content: "Tech stack dan pengalaman kerja",
-    icon: <ExperienceIcon />,
-  },
+  { id: "aboutme", title: "About Me", icon: <AboutIcon /> },
+  { id: "templates", title: "Templates", icon: <TemplatesIcon /> },
+  { id: "experience", title: "Experience", icon: <ExperienceIcon /> },
 ];
 
 const NAVIGATE_ROUTES: Record<string, string> = {
@@ -80,6 +66,7 @@ const NAVIGATE_ROUTES: Record<string, string> = {
   templates: "/template",
 };
 
+// Animasi container dan kartu (tetap)
 const containerVariants = {
   hidden: { opacity: 0 },
   visible: {
@@ -99,6 +86,7 @@ const cardVariants = {
   },
 } as const;
 
+// ========== BACK BUTTON ==========
 const BackButton = ({ onClick }: { onClick: () => void }) => {
   const text = "back to the beginning".split("");
   return (
@@ -108,7 +96,12 @@ const BackButton = ({ onClick }: { onClick: () => void }) => {
         initial="initial"
         onClick={onClick}
         rippleColor="bg-[#075985]/50"
-        className="px-6 py-3 sm:px-12 sm:py-3 md:px-16 md:py-4 bg-[#075985]/20 border border-[#075985]/40 rounded-full transition-all duration-300 text-sm sm:text-base md:text-lg backdrop-blur-md flex items-center justify-center"
+        className="px-6 py-3 sm:px-10 sm:py-3 md:px-14 md:py-4 
+                   bg-[#075985]/20 border border-[#075985]/40 
+                   rounded-full transition-all duration-300 
+                   text-sm sm:text-base md:text-lg 
+                   backdrop-blur-md flex items-center justify-center
+                   min-h-[44px] min-w-[44px] relative overflow-hidden"
       >
         <motion.div
           className="flex whitespace-nowrap"
@@ -144,6 +137,7 @@ const BackButton = ({ onClick }: { onClick: () => void }) => {
   );
 };
 
+// ========== MAIN COMPONENT ==========
 export default function AboutSection({ onClose }: { onClose: () => void }) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -162,8 +156,15 @@ export default function AboutSection({ onClose }: { onClose: () => void }) {
     setSelectedId(id);
   };
 
+  const isOdd = CARDS.length % 2 !== 0;
+
   return (
-    <main className="relative select-none h-dvh w-full text-white flex flex-col items-center justify-center overflow-hidden px-4 py-3 sm:px-6 sm:py-12">
+    <main
+      className="relative select-none h-dvh w-full text-white 
+                 flex flex-col items-center justify-center 
+                 overflow-hidden px-3 py-2 sm:px-6 sm:py-8 md:px-8 md:py-12"
+    >
+      {/* Background */}
       <motion.div
         className="fixed inset-0 pointer-events-none -z-10"
         initial={{ opacity: 0 }}
@@ -193,10 +194,15 @@ export default function AboutSection({ onClose }: { onClose: () => void }) {
               animate="visible"
               exit={{ opacity: 0, scale: 0.95, filter: "blur(10px)" }}
               transition={{ duration: 0.3 }}
-              className="flex flex-col sm:flex-row flex-wrap items-center justify-center gap-4 sm:gap-6 md:gap-8 z-10 w-full max-w-5xl flex-1 min-h-0"
+              className="grid grid-cols-2 lg:grid-cols-3 
+                         gap-3 sm:gap-5 md:gap-8 
+                         z-10 w-full max-w-xs sm:max-w-xl lg:max-w-5xl 
+                         place-items-center"
             >
-              {CARDS.map((card) => {
+              {CARDS.map((card, index) => {
                 const navigateTo = NAVIGATE_ROUTES[card.id];
+                const isLastOddItem =
+                  isOdd && index === CARDS.length - 1;
 
                 return (
                   <motion.div
@@ -208,42 +214,55 @@ export default function AboutSection({ onClose }: { onClose: () => void }) {
                         ? (e) => handleNavigate(e, navigateTo)
                         : (e) => handleSelect(e, card.id)
                     }
-                    className="w-64 sm:w-56 md:w-64 h-56 sm:h-64 md:h-80 flex-shrink-0 bg-white/5 backdrop-blur-xl rounded-2xl sm:rounded-3xl flex flex-col items-center justify-center gap-3 sm:gap-4 md:gap-5 cursor-pointer border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.3)]"
+                    className={`w-full max-w-40 sm:max-w-52 md:max-w-64 
+                               aspect-[4/5] sm:h-60 md:h-72 sm:aspect-auto
+                               flex-shrink-0 
+                               rounded-2xl sm:rounded-3xl 
+                               flex flex-col items-center justify-center 
+                               gap-2 sm:gap-3 md:gap-4 
+                               cursor-pointer 
+                               transition-all duration-300 
+                               group
+                               relative
+                               overflow-hidden
+                               border border-white/10 
+                               shadow-[0_8px_32px_rgba(0,0,0,0.25)]
+                               hover:shadow-[0_16px_48px_rgba(0,0,0,0.4)]
+                               bg-white/5 
+                               backdrop-blur-xl
+                               hover:bg-white/10
+                               hover:border-white/20
+                               ${isLastOddItem ? "col-span-2 lg:col-span-1" : ""}`}
                     whileHover={
                       navigateTo
-                        ? {
-                            scale: 1.05,
-                            backgroundColor: "rgba(255,255,255,0.1)",
-                            borderColor: "rgba(255,255,255,0.2)",
-                            boxShadow: "0 8px 40px rgba(0,0,0,0.4)",
-                          }
-                        : {
-                            scale: 1.08,
-                            rotateY: 15,
-                            z: 50,
-                            backgroundColor: "rgba(255,255,255,0.1)",
-                            borderColor: "rgba(255,255,255,0.2)",
-                            boxShadow: "0 8px 40px rgba(0,0,0,0.4)",
-                          }
+                        ? { scale: 1.04 }
+                        : { scale: 1.06, rotateY: 10, z: 50 }
                     }
                     whileTap={{ scale: 0.95 }}
                     style={{
-                      background: "rgba(255, 255, 255, 0.08)",
-                      backdropFilter: "blur(20px)",
-                      WebkitBackdropFilter: "blur(20px)",
-                      border: "1px solid rgba(255, 255, 255, 0.15)",
+                      background: "rgba(255, 255, 255, 0.06)",
+                      backdropFilter: "blur(24px)",
+                      WebkitBackdropFilter: "blur(24px)",
                     }}
                   >
+                    {/* Efek glow pada hover */}
+                    <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+
                     {/* Icon */}
-                    <div className="flex-shrink-0 opacity-90 flex items-center justify-center">
+                    <div className="flex-shrink-0 opacity-90 flex items-center justify-center transition-transform duration-300 group-hover:scale-105">
                       {card.icon}
                     </div>
 
-                    <div className="text-center">
-                      <h2 className="text-xl sm:text-xl md:text-2xl font-light tracking-wide text-white/90 drop-shadow-lg">
-                        {card.title}
-                      </h2>
-                    </div>
+                    {/* Title */}
+                    <h2 className="text-sm sm:text-xl md:text-2xl 
+                                   font-light tracking-wide 
+                                   text-white/90 drop-shadow-lg 
+                                   text-center px-2">
+                      {card.title}
+                    </h2>
+
+                    {/* Indikator interaktif */}
+                    <div className="absolute bottom-3 left-1/2 -translate-x-1/2 w-0 h-0.5 bg-white/30 rounded-full transition-all duration-300 group-hover:w-1/3" />
                   </motion.div>
                 );
               })}
@@ -252,12 +271,14 @@ export default function AboutSection({ onClose }: { onClose: () => void }) {
         )}
       </AnimatePresence>
 
+      {/* Tombol Back */}
       {!isLoading && (
         <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="flex-shrink-0 mt-4 sm:mt-10 md:mt-12"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 20 }}
+          transition={{ delay: 0.4, duration: 0.5 }}
+          className="flex-shrink-0 mt-4 sm:mt-6 md:mt-10"
         >
           <BackButton onClick={onClose} />
         </motion.div>

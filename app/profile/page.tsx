@@ -13,7 +13,7 @@ import AIBrain from "@/components/AIBrain";
 
 export default function Home() {
   return (
-    <main className="relative min-h-screen bg-black text-[#eaf0fb] overflow-x-hidden">
+    <main className="relative select-none min-h-screen bg-black text-[#eaf0fb] overflow-x-hidden">
       <AIBrain />
       <div className="fixed inset-0 z-0">
         <StarfieldCanvas />

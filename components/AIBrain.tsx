@@ -47,18 +47,32 @@ const PORTFOLIO_KEYS = [
 // Fungsi untuk menyaring data sensitif
 const sanitizeText = (text: string): string => {
   if (!text) return "";
-  // Hapus email
   let sanitized = text.replace(
     /[\w.-]+@[\w.-]+\.\w+/g,
     "[email disembunyikan]",
   );
-  // Hapus nomor telepon (format Indonesia & internasional)
   sanitized = sanitized.replace(
     /(\+?\d{1,3}[-.\s]?)?(\(?\d{3}\)?[-.\s]?)?\d{3}[-.\s]?\d{4,}/g,
     "[telepon disembunyikan]",
   );
   return sanitized;
 };
+
+// Ambil triplet "r, g, b" dari string warna css apapun (rgb/rgba lewat computed style)
+const toRgbTriplet = (colorStr: string): string | null => {
+  const match = colorStr.match(/\d+(\.\d+)?/g);
+  if (!match || match.length < 3) return null;
+  return `${match[0]}, ${match[1]}, ${match[2]}`;
+};
+
+// Tentukan apakah warna itu terang (untuk memilih warna teks/bubble yang kontras)
+const isLightColor = (rgbTriplet: string): boolean => {
+  const [r, g, b] = rgbTriplet.split(",").map((n) => parseFloat(n.trim()));
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return luminance > 0.55;
+};
+
+const DEFAULT_BG_TRIPLET = "15, 23, 42"; // fallback slate-900
 
 export default function AIBrain() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -72,6 +86,67 @@ export default function AIBrain() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
+  // Triplet rgb dari background halaman profil (bukan string css penuh),
+  // supaya bisa dipakai untuk turunan warna (bubble, border, dsb) sekaligus
+  // dipakai untuk menghitung kontras teks. Ini menggantikan ketergantungan
+  // pada class Tailwind `dark:` yang tidak selalu aktif di halaman ini.
+  const [bgTriplet, setBgTriplet] = useState<string>(DEFAULT_BG_TRIPLET);
+
+  useEffect(() => {
+    const detectBg = () => {
+      const candidates = [
+        document.querySelector("#profile"),
+        document.querySelector("#about"),
+        document.querySelector("main"),
+        document.body,
+      ].filter(Boolean) as Element[];
+
+      for (const el of candidates) {
+        const bg = getComputedStyle(el).backgroundColor;
+        if (bg && bg !== "rgba(0, 0, 0, 0)" && bg !== "transparent") {
+          const triplet = toRgbTriplet(bg);
+          if (triplet) {
+            setBgTriplet(triplet);
+            return;
+          }
+        }
+      }
+      setBgTriplet(DEFAULT_BG_TRIPLET);
+    };
+
+    detectBg();
+    const observer = new MutationObserver(detectBg);
+    observer.observe(document.body, {
+      attributes: true,
+      attributeFilter: ["style", "class"],
+      childList: true,
+      subtree: true,
+    });
+    return () => observer.disconnect();
+  }, []);
+
+  // Semua warna turunan dihitung dari bgTriplet, jadi selalu "cocok" dengan
+  // background halaman apapun temanya (terang atau gelap).
+  const isLight = isLightColor(bgTriplet);
+  const cardBg = `rgba(${bgTriplet}, 0.85)`;
+  const headerBorder = isLight ? "border-black/10" : "border-white/10";
+  const textPrimary = isLight ? "#1c1c1e" : "#f5f5f7";
+  const textSecondary = isLight
+    ? "rgba(28,28,30,0.55)"
+    : "rgba(245,245,247,0.55)";
+  const emptyStateBorder = isLight ? "border-black/15" : "border-white/15";
+  const emptyStateBg = isLight ? "rgba(0,0,0,0.03)" : "rgba(255,255,255,0.04)";
+  const assistantBubbleBg = isLight
+    ? "rgba(0,0,0,0.06)"
+    : "rgba(255,255,255,0.10)";
+  const assistantBubbleBorder = isLight
+    ? "rgba(0,0,0,0.06)"
+    : "rgba(255,255,255,0.08)";
+  const inputBg = isLight ? "rgba(0,0,0,0.05)" : "rgba(255,255,255,0.08)";
+  const scrollbarTrack = isLight
+    ? "rgba(0,0,0,0.06)"
+    : "rgba(255,255,255,0.06)";
+
   // Extract data dari halaman secara otomatis
   const extractProfileContext = useCallback((): ProfileContext => {
     const skills: string[] = [];
@@ -80,7 +155,6 @@ export default function AIBrain() {
     let about = "";
     let contact = "";
 
-    // Extract dari section Skills
     const skillsSection = document.querySelector("#skills");
     if (skillsSection) {
       const skillItems = skillsSection.querySelectorAll(
@@ -94,7 +168,6 @@ export default function AIBrain() {
       });
     }
 
-    // Extract dari section Experience
     const experienceSection = document.querySelector("#experience");
     if (experienceSection) {
       const roles = experienceSection.querySelectorAll("h3, p");
@@ -106,7 +179,6 @@ export default function AIBrain() {
       });
     }
 
-    // Extract dari section Projects
     const projectsSection = document.querySelector("#projects");
     if (projectsSection) {
       const projectItems = projectsSection.querySelectorAll(
@@ -120,7 +192,6 @@ export default function AIBrain() {
       });
     }
 
-    // Extract tentang (About section)
     const aboutSection = document.querySelector("#about");
     if (aboutSection) {
       const aboutParagraph = aboutSection.querySelector("p");
@@ -131,7 +202,6 @@ export default function AIBrain() {
       );
     }
 
-    // Extract kontak (Contact section)
     const contactSection = document.querySelector("#contact");
     if (contactSection) {
       const contactText = contactSection.textContent?.trim() || "";
@@ -145,12 +215,12 @@ export default function AIBrain() {
       experience: [...new Set(experience)].map((e) => sanitizeText(e)),
       projects: [...new Set(projects)].map((p) => sanitizeText(p)),
       about,
-      contact: contact || "Informasi kontak dapat dilihat di bagian kontak halaman.",
+      contact:
+        contact || "Informasi kontak dapat dilihat di bagian kontak halaman.",
       summary: `Pemilik portofolio memiliki total ${allSkills.length} keahlian. Berikan jawaban yang detail dan bermanfaat. Jika ditanya tentang keahlian, sebutkan beberapa contoh utama dan jelaskan konteks penggunaannya. Jangan menyebutkan semua keahlian sekaligus.`,
     };
   }, []);
 
-  // Extract context saat component mount & saat halaman berubah
   useEffect(() => {
     const context = extractProfileContext();
     setProfileContext(context);
@@ -177,12 +247,10 @@ export default function AIBrain() {
     scrollToBottom();
   }, [messages]);
 
-  // Navigasi yang lebih selektif
   const autoNavigateToSection = useCallback(
     (userMessage: string) => {
-      const message = userMessage.toLowerCase().replace(/[?.,]/g, ""); // Hapus tanda baca
+      const message = userMessage.toLowerCase().replace(/[?.,]/g, "");
 
-      // Deteksi perintah navigasi ke halaman lain
       const routeMaps: Record<string, string> = {
         template: "/template",
         koleksi: "/template",
@@ -192,16 +260,21 @@ export default function AIBrain() {
 
       for (const [keyword, path] of Object.entries(routeMaps)) {
         if (message.includes(keyword)) {
-          // Periksa kata kerja navigasi untuk kepastian
-          const navWords = ["buka", "lihat", "ke", "tunjukkan", "arahkan", "pergi"];
+          const navWords = [
+            "buka",
+            "lihat",
+            "ke",
+            "tunjukkan",
+            "arahkan",
+            "pergi",
+          ];
           if (navWords.some((w) => message.includes(w))) {
             router.push(path);
-            return keyword; // Kembalikan keyword yang terdeteksi
+            return keyword;
           }
         }
       }
 
-      // Deteksi perintah navigasi ke section dalam halaman
       const navPhrases = [
         "arahkan ke",
         "tunjukkan",
@@ -213,12 +286,13 @@ export default function AIBrain() {
         "pergi ke",
         "ke halaman",
       ];
-      // Deteksi niat implisit untuk navigasi
       const implicitNavPhrases = ["di mana", "bagaimana cara", "info soal"];
       const hasNavPhrase = navPhrases.some((phrase) =>
         message.includes(phrase),
       );
-      const hasImplicitNav = implicitNavPhrases.some(p => message.startsWith(p));
+      const hasImplicitNav = implicitNavPhrases.some((p) =>
+        message.startsWith(p),
+      );
       if (!hasNavPhrase && !hasImplicitNav) return null;
 
       const sectionMaps: Record<string, string> = {
@@ -273,14 +347,19 @@ export default function AIBrain() {
       try {
         const encryptionKey = process.env.NEXT_PUBLIC_ENCRYPTION_KEY;
         if (!encryptionKey) {
-          throw new Error("Kunci enkripsi (NEXT_PUBLIC_ENCRYPTION_KEY) tidak dikonfigurasi di client.");
+          throw new Error(
+            "Kunci enkripsi (NEXT_PUBLIC_ENCRYPTION_KEY) tidak dikonfigurasi di client.",
+          );
         }
 
-        const encryptedPayload = await encryptPayload({
-          message: query,
-          profileContext: profileContext,
-          detectedSection: detectedSection,
-        }, encryptionKey);
+        const encryptedPayload = await encryptPayload(
+          {
+            message: query,
+            profileContext: profileContext,
+            detectedSection: detectedSection,
+          },
+          encryptionKey,
+        );
 
         const response = await fetch("/api/chat-ai", {
           method: "POST",
@@ -346,7 +425,14 @@ export default function AIBrain() {
       regex.test(part) ? (
         <code
           key={idx}
-          className="not-italic font-medium text-cyan-300 bg-cyan-900/30 px-1.5 py-0.5 rounded-md border border-cyan-700/30"
+          className="not-italic font-medium px-1.5 py-0.5 rounded-md"
+          style={{
+            color: "#007AFF",
+            backgroundColor: isLight
+              ? "rgba(0,122,255,0.08)"
+              : "rgba(0,122,255,0.15)",
+            border: `1px solid ${isLight ? "rgba(0,122,255,0.15)" : "rgba(0,122,255,0.25)"}`,
+          }}
         >
           {part}
         </code>
@@ -359,65 +445,48 @@ export default function AIBrain() {
   return (
     <>
       <style>{`
-        .ai-brain-container, .ai-brain-container * { font-family: 'Poppins', sans-serif; }
+        .ai-brain-container, .ai-brain-container * { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
         @keyframes ai-float {
           0%, 100% { transform: translateY(0px); }
           50% { transform: translateY(-10px); }
         }
         @keyframes pulse-glow {
-          0%, 100% { box-shadow: 0 0 20px rgba(6, 182, 212, 0.6); }
-          50% { box-shadow: 0 0 30px rgba(6, 182, 212, 0.8); }
+          0%, 100% { box-shadow: 0 0 20px rgba(0, 122, 255, 0.6); }
+          50% { box-shadow: 0 0 30px rgba(0, 122, 255, 0.8); }
         }
         .float-button { animation: ai-float 3s ease-in-out infinite; }
-        .pulse-glow { animation: ai-pulse-glow 2s ease-in-out infinite; }
+        .pulse-glow { animation: pulse-glow 2s ease-in-out infinite; }
         .message-fade { animation: fadeInUp 0.3s ease-out; }
         @keyframes fadeInUp {
           from { opacity: 0; transform: translateY(10px); }
           to { opacity: 1; transform: translateY(0); }
         }
-        .chat-gradient { background: linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(20, 28, 50, 0.95) 100%); }
-        
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 6px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: rgba(51, 65, 85, 0.3);
+        .ai-brain-scrollbar::-webkit-scrollbar { width: 6px; }
+        .ai-brain-scrollbar::-webkit-scrollbar-track {
+          background: ${scrollbarTrack};
           border-radius: 10px;
         }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: linear-gradient(180deg, rgba(6, 182, 212, 0.6), rgba(59, 130, 246, 0.6));
+        .ai-brain-scrollbar::-webkit-scrollbar-thumb {
+          background: rgba(0, 122, 255, 0.4);
           border-radius: 10px;
-          transition: background 0.3s ease;
         }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: linear-gradient(180deg, rgba(6, 182, 212, 0.8), rgba(59, 130, 246, 0.8));
+        .ai-brain-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: rgba(0, 122, 255, 0.6);
         }
-        .custom-scrollbar {
+        .ai-brain-scrollbar {
           scrollbar-width: thin;
-          scrollbar-color: rgba(6, 182, 212, 0.6) rgba(51, 65, 85, 0.3);
+          scrollbar-color: rgba(0, 122, 255, 0.4) ${scrollbarTrack};
         }
-        .message-bubble {
-          word-wrap: break-word;
-          overflow-wrap: break-word;
-          line-height: 1.5;
-        }
-        .message-bubble ul, .message-bubble ol {
-          margin: 0.5rem 0 0.5rem 1.5rem;
-          padding: 0;
-        }
-        .message-bubble li {
-          margin: 0.25rem 0;
-        }
-        .message-bubble strong {
-          font-weight: 600;
-          color: #06b6d4;
-        }
+        .message-bubble { word-wrap: break-word; overflow-wrap: break-word; line-height: 1.5; }
+        .message-bubble ul, .message-bubble ol { margin: 0.5rem 0 0.5rem 1.5rem; padding: 0; }
+        .message-bubble li { margin: 0.25rem 0; }
+        .message-bubble strong { font-weight: 600; color: #007AFF; }
+        .ai-brain-input::placeholder { color: ${isLight ? "rgba(28,28,30,0.35)" : "rgba(245,245,247,0.35)"}; }
       `}</style>
-
       <button
         type="button"
         onClick={() => setIsOpen((prev) => !prev)}
-        className="float-button pulse-glow fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 text-white shadow-2xl transition-transform duration-300 hover:scale-110 focus:outline-none focus:ring-2 focus:ring-cyan-300"
+        className="float-button pulse-glow fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-[#007AFF] text-white shadow-2xl transition-transform duration-300 hover:scale-110 focus:outline-none focus:ring-2 focus:ring-cyan-300"
         aria-label={isOpen ? "Tutup chat AI" : "Buka chat AI"}
       >
         <AnimatePresence initial={false} mode="wait">
@@ -430,12 +499,28 @@ export default function AIBrain() {
             className="w-7 h-7"
           >
             {isOpen ? (
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
                 <line x1="18" y1="6" x2="6" y2="18"></line>
                 <line x1="6" y1="6" x2="18" y2="18"></line>
               </svg>
             ) : (
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
                 <path d="M12 2a10 10 0 0 0-10 10c0 4.42 2.87 8.17 6.84 9.5.6.11.82-.26.82-.57v-2.03c-2.78.6-3.37-1.34-3.37-1.34-.55-1.38-1.33-1.75-1.33-1.75-1.08-.74.08-.72.08-.72 1.2.08 1.83 1.23 1.83 1.23 1.07 1.83 2.8 1.3 3.48 1 .1-.78.42-1.3.76-1.6-2.66-.3-5.46-1.33-5.46-5.93 0-1.31.47-2.38 1.23-3.22-.12-.3-.54-1.52.12-3.18 0 0 1-.32 3.3 1.23a11.5 11.5 0 0 1 6 0c2.3-1.55 3.3-1.23 3.3-1.23.66 1.66.24 2.88.12 3.18.77.84 1.23 1.91 1.23 3.22 0 4.61-2.81 5.63-5.48 5.93.43.37.82 1.1.82 2.22v3.29c0 .31.22.69.82.57A10 10 0 0 0 22 12 10 10 0 0 0 12 2Z" />
               </svg>
             )}
@@ -443,60 +528,79 @@ export default function AIBrain() {
         </AnimatePresence>
       </button>
 
+      {/* Widget chat */}
       {isOpen && (
-        <div className="ai-brain-container message-fade fixed bottom-24 right-6 sm:bottom-28 sm:right-6 z-40 w-[calc(100vw-3rem)] max-w-md h-[70vh] rounded-2xl shadow-2xl border border-slate-700 bg-slate-900/80 backdrop-blur-xl overflow-hidden flex flex-col">
+        <div
+          className="ai-brain-container message-fade fixed bottom-24 right-6 sm:bottom-28 sm:right-6 z-40 w-[calc(100vw-2.5rem)] max-w-sm h-[60vh] max-h-[80vh] rounded-2xl shadow-2xl overflow-hidden flex flex-col"
+          style={{
+            backgroundColor: cardBg,
+            backdropFilter: "blur(16px)",
+            WebkitBackdropFilter: "blur(16px)",
+            border: `1px solid ${isLight ? "rgba(0,0,0,0.08)" : "rgba(255,255,255,0.08)"}`,
+          }}
+        >
           <div className="flex flex-col h-full">
-            <header className="px-4 sm:px-5 py-3 border-b border-slate-700 flex-shrink-0">
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex-1">
-                  <h2
-                    className="text-base sm:text-lg font-bold tracking-wide text-cyan-300"
-                    style={{ fontFamily: "'Poppins', sans-serif" }}
-                  >
-                    🧠 Brain-in-Browser
-                  </h2>
-                  <p
-                    className="text-xs text-slate-400 mt-1.5"
-                    style={{ fontFamily: "'Poppins', sans-serif" }}
-                  >
-                    Tanya tentang pengalaman, skill, atau proyek
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setIsOpen(false)}
-                  className="rounded-lg bg-slate-700/40 hover:bg-slate-600/50 px-3 sm:px-4 py-1.5 text-xs sm:text-sm text-slate-300 hover:text-white transition font-medium"
-                  style={{ fontFamily: "'Poppins', sans-serif" }}
+            {/* Header iOS style */}
+            <header
+              className={`px-4 py-3 border-b ${headerBorder} flex items-center justify-between flex-shrink-0`}
+            >
+              <div>
+                <h2
+                  className="text-base font-extrabold"
+                  style={{ color: textPrimary }}
                 >
-                  Tutup
-                </button>
+                  AGEN AI
+                </h2>
+                <p className="text-xs" style={{ color: textSecondary }}>
+                  Tanya tentang pemilik
+                </p>
               </div>
+              <button
+                type="button"
+                onClick={() => setIsOpen(false)}
+                className="text-sm font-medium"
+                style={{ color: "#007AFF" }}
+              >
+                Tutup
+              </button>
             </header>
 
+            {/* Daftar pesan */}
             <div
-              className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4 custom-scrollbar"
+              className="ai-brain-scrollbar flex-1 overflow-y-auto p-4 space-y-3"
               style={{ minHeight: 0 }}
             >
               {messages.length === 0 && (
                 <div
-                  className="rounded-xl border border-dashed border-slate-700 bg-slate-800/30 p-4 sm:p-5 text-xs sm:text-sm text-slate-400 text-center"
-                  style={{ fontFamily: "'Poppins', sans-serif" }}
+                  className={`rounded-xl border border-dashed ${emptyStateBorder} p-4 text-xs sm:text-sm text-center`}
+                  style={{
+                    backgroundColor: emptyStateBg,
+                    color: textSecondary,
+                  }}
                 >
-                  ✨ Tanyakan sesuatu tentang pemilik portofolio untuk memulai
+                  ✨ Tanyakan sesuatu tentang pemilik portofolio
                 </div>
               )}
               {messages.map((m, i) => (
                 <div
                   key={i}
-                  className={`message-fade ${m.role === "user" ? "flex justify-end" : "flex justify-start"}`}
+                  className={`message-fade flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
                 >
                   <div
-                    className={`message-bubble max-w-[85%] rounded-xl px-3.5 py-2.5 sm:px-4 sm:py-3 text-sm leading-relaxed transition ${
+                    className={`message-bubble max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
                       m.role === "user"
-                        ? "bg-gradient-to-br from-cyan-500 to-blue-600 text-white rounded-br-none"
-                        : "bg-slate-700/50 text-slate-200 border border-slate-600/50 rounded-bl-none"
+                        ? "bg-[#007AFF] text-white rounded-br-md"
+                        : "rounded-bl-md"
                     }`}
-                    style={{ fontFamily: "'Poppins', sans-serif" }}
+                    style={
+                      m.role === "assistant"
+                        ? {
+                            backgroundColor: assistantBubbleBg,
+                            border: `1px solid ${assistantBubbleBorder}`,
+                            color: textPrimary,
+                          }
+                        : undefined
+                    }
                   >
                     {m.role === "assistant"
                       ? highlightKeywords(m.content)
@@ -507,20 +611,23 @@ export default function AIBrain() {
               {isGenerating && (
                 <div className="flex justify-start message-fade">
                   <div
-                    className="bg-gradient-to-br from-slate-700/80 to-slate-800/80 text-slate-100 border border-slate-600/50 rounded-xl px-4 sm:px-5 py-3 sm:py-4 shadow-lg shadow-slate-900/40 rounded-bl-none"
-                    style={{ fontFamily: "'Poppins', sans-serif" }}
+                    className="rounded-2xl px-4 py-3 rounded-bl-md"
+                    style={{
+                      backgroundColor: assistantBubbleBg,
+                      border: `1px solid ${assistantBubbleBorder}`,
+                    }}
                   >
-                    <span className="inline-flex gap-2">
+                    <span className="flex gap-1">
                       <span
-                        className="inline-block w-2 h-2 bg-cyan-400 rounded-full animate-bounce"
+                        className="w-2 h-2 bg-[#007AFF] rounded-full animate-bounce"
                         style={{ animationDelay: "0ms" }}
                       ></span>
                       <span
-                        className="inline-block w-2 h-2 bg-cyan-400 rounded-full animate-bounce"
+                        className="w-2 h-2 bg-[#007AFF] rounded-full animate-bounce"
                         style={{ animationDelay: "150ms" }}
                       ></span>
                       <span
-                        className="inline-block w-2 h-2 bg-cyan-400 rounded-full animate-bounce"
+                        className="w-2 h-2 bg-[#007AFF] rounded-full animate-bounce"
                         style={{ animationDelay: "300ms" }}
                       ></span>
                     </span>
@@ -528,33 +635,28 @@ export default function AIBrain() {
                 </div>
               )}
               {errorMsg && (
-                <div
-                  className="rounded-xl bg-red-500/10 px-4 py-3 text-sm text-red-300 border border-red-500/20"
-                  style={{ fontFamily: "'Poppins', sans-serif" }}
-                >
+                <div className="rounded-xl bg-red-500/10 px-4 py-3 text-sm text-red-300 border border-red-500/20">
                   ⚠️ <span className="font-medium">{errorMsg}</span>
                 </div>
               )}
               <div ref={messagesEndRef} />
             </div>
-
             <form
               onSubmit={handleSubmit}
-              className="border-t border-slate-700 bg-slate-900/80 p-3 sm:p-4 flex gap-2 sm:gap-3 flex-shrink-0"
+              className={`border-t ${headerBorder} p-3 flex gap-2 flex-shrink-0`}
             >
               <input
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 disabled={isGenerating}
                 placeholder="Tanya sesuatu..."
-                className="flex-1 bg-slate-800 border border-slate-600 rounded-lg px-4 py-2 text-sm text-slate-100 placeholder-slate-400 outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 disabled:opacity-50 transition"
-                style={{ fontFamily: "'Poppins', sans-serif" }}
+                className="ai-brain-input flex-1 border-0 rounded-full px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-[#007AFF] disabled:opacity-50 transition"
+                style={{ backgroundColor: inputBg, color: textPrimary }}
               />
               <button
                 type="submit"
                 disabled={isGenerating || !input.trim()}
-                className="px-4 sm:px-5 py-2 rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition"
-                style={{ fontFamily: "'Poppins', sans-serif" }}
+                className="px-4 py-2 rounded-full bg-[#007AFF] text-white text-sm font-medium disabled:opacity-50 transition"
               >
                 {isGenerating ? "..." : "Kirim"}
               </button>
