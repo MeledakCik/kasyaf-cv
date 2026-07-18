@@ -2,8 +2,7 @@
 import { NextResponse } from 'next/server';
 
 const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:8000';
-// 🔥 Perpanjang timeout menjadi 120 detik
-const TIMEOUT = 120000; // 2 menit
+const TIMEOUT = 120000;
 
 export async function POST(request: Request) {
   try {

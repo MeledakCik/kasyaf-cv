@@ -44,7 +44,6 @@ const PORTFOLIO_KEYS = [
   "arsitektur",
 ];
 
-// Fungsi untuk menyaring data sensitif
 const sanitizeText = (text: string): string => {
   if (!text) return "";
   let sanitized = text.replace(
@@ -55,24 +54,75 @@ const sanitizeText = (text: string): string => {
     /(\+?\d{1,3}[-.\s]?)?(\(?\d{3}\)?[-.\s]?)?\d{3}[-.\s]?\d{4,}/g,
     "[telepon disembunyikan]",
   );
+  sanitized = sanitized.replace(/[<>{}[\]\\;]/g, "");
   return sanitized;
 };
+function sanitizeClientInput(text: string): string {
+  let cleaned = text.replace(/[<>{}[\]\\;'"`]/g, "");
+  cleaned = cleaned.replace(/[\u0000-\u001F\u007F-\u009F]/g, "");
+  if (cleaned.length > 2000) cleaned = cleaned.substring(0, 2000);
 
-// Ambil triplet "r, g, b" dari string warna css apapun (rgb/rgba lewat computed style)
+  const injectionPhrases = [
+    /abaikan\s+instruksi/i,
+    /lupakan\s+aturan/i,
+    /ignore\s+previous/i,
+    /override\s+system/i,
+    /sekarang\s+kamu\s+menjadi/i,
+    /mode\s+dan/i,
+    /jangan\s+patuhi/i,
+    /don't\s+follow/i,
+  ];
+  if (injectionPhrases.some((re) => re.test(cleaned))) {
+    return "[Pertanyaan tidak valid]";
+  }
+  return cleaned;
+}
+
+if (typeof window !== "undefined") {
+  const consoleMethods = ["log", "warn", "error", "info", "debug", "trace"];
+  consoleMethods.forEach((method) => {
+    const original = console[method as keyof Console];
+    if (typeof original === "function") {
+      Object.defineProperty(console, method, {
+        value: original,
+        writable: false,
+        configurable: false,
+      });
+    }
+  });
+
+  if (process.env.NODE_ENV === "production") {
+    Object.defineProperty(window, "eval", {
+      value: function () {
+        throw new Error("eval() diblokir untuk keamanan");
+      },
+      writable: false,
+      configurable: false,
+    });
+
+    Object.defineProperty(window, "Function", {
+      value: function () {
+        throw new Error("Function() diblokir untuk keamanan");
+      },
+      writable: false,
+      configurable: false,
+    });
+  }
+}
+
 const toRgbTriplet = (colorStr: string): string | null => {
   const match = colorStr.match(/\d+(\.\d+)?/g);
   if (!match || match.length < 3) return null;
   return `${match[0]}, ${match[1]}, ${match[2]}`;
 };
 
-// Tentukan apakah warna itu terang (untuk memilih warna teks/bubble yang kontras)
 const isLightColor = (rgbTriplet: string): boolean => {
   const [r, g, b] = rgbTriplet.split(",").map((n) => parseFloat(n.trim()));
   const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
   return luminance > 0.55;
 };
 
-const DEFAULT_BG_TRIPLET = "15, 23, 42"; // fallback slate-900
+const DEFAULT_BG_TRIPLET = "15, 23, 42";
 
 export default function AIBrain() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -86,11 +136,7 @@ export default function AIBrain() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
-  // Triplet rgb dari background halaman profil (bukan string css penuh),
-  // supaya bisa dipakai untuk turunan warna (bubble, border, dsb) sekaligus
-  // dipakai untuk menghitung kontras teks. Ini menggantikan ketergantungan
-  // pada class Tailwind `dark:` yang tidak selalu aktif di halaman ini.
-  const [bgTriplet, setBgTriplet] = useState<string>(DEFAULT_BG_TRIPLET);
+  const [bgTriplet, setBgTriplet] = useState<string>("15, 23, 42");
 
   useEffect(() => {
     const detectBg = () => {
@@ -125,8 +171,6 @@ export default function AIBrain() {
     return () => observer.disconnect();
   }, []);
 
-  // Semua warna turunan dihitung dari bgTriplet, jadi selalu "cocok" dengan
-  // background halaman apapun temanya (terang atau gelap).
   const isLight = isLightColor(bgTriplet);
   const cardBg = `rgba(${bgTriplet}, 0.85)`;
   const headerBorder = isLight ? "border-black/10" : "border-white/10";
@@ -147,7 +191,6 @@ export default function AIBrain() {
     ? "rgba(0,0,0,0.06)"
     : "rgba(255,255,255,0.06)";
 
-  // Extract data dari halaman secara otomatis
   const extractProfileContext = useCallback((): ProfileContext => {
     const skills: string[] = [];
     const experience: string[] = [];
@@ -257,7 +300,6 @@ export default function AIBrain() {
         project: "/project",
         proyek: "/project",
       };
-
       for (const [keyword, path] of Object.entries(routeMaps)) {
         if (message.includes(keyword)) {
           const navWords = [
@@ -270,60 +312,59 @@ export default function AIBrain() {
           ];
           if (navWords.some((w) => message.includes(w))) {
             router.push(path);
-            return keyword;
+            return keyword; 
           }
         }
       }
 
-      const navPhrases = [
-        "arahkan ke",
-        "tunjukkan",
-        "tunjukan",
-        "bawa ke",
-        "ke bagian",
-        "buka bagian",
-        "lihat bagian",
-        "pergi ke",
-        "ke halaman",
-      ];
-      const implicitNavPhrases = ["di mana", "bagaimana cara", "info soal"];
-      const hasNavPhrase = navPhrases.some((phrase) =>
-        message.includes(phrase),
-      );
-      const hasImplicitNav = implicitNavPhrases.some((p) =>
-        message.startsWith(p),
-      );
-      if (!hasNavPhrase && !hasImplicitNav) return null;
-
       const sectionMaps: Record<string, string> = {
+        // Skills
         skill: "skills",
         keahlian: "skills",
         teknologi: "skills",
         "tech stack": "skills",
+
+        // Experience
         pengalaman: "experience",
         experience: "experience",
         kerja: "experience",
+
+        // Projects
         proyek: "projects",
         project: "projects",
         portfolio: "projects",
+
+        // Contact
         kontak: "contact",
         hubungi: "contact",
         contact: "contact",
+
+        // About
         tentang: "about",
         about: "about",
         siapa: "about",
+
+        // PROFILE
+        profile: "profile",
+        profil: "profile",
       };
 
+      let foundSection: string | null = null;
       for (const [keyword, sectionId] of Object.entries(sectionMaps)) {
         if (message.includes(keyword)) {
-          const section = document.querySelector(`#${sectionId}`);
-          if (section) {
-            setTimeout(() => {
-              section.scrollIntoView({ behavior: "smooth", block: "start" });
-            }, 300);
-            return sectionId;
-          }
+          foundSection = sectionId;
+          break;
         }
+      }
+
+      if (!foundSection) return null;
+
+      const section = document.querySelector(`#${foundSection}`);
+      if (section) {
+        setTimeout(() => {
+          section.scrollIntoView({ behavior: "smooth", block: "start" });
+        }, 300);
+        return foundSection;
       }
 
       return null;
@@ -334,10 +375,19 @@ export default function AIBrain() {
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
       e.preventDefault();
-      const query = input.trim();
-      if (!query || isGenerating) return;
+
+      const rawQuery = input.trim();
+      if (!rawQuery || isGenerating) return;
+
+      const query = sanitizeClientInput(rawQuery);
+      if (query === "[Pertanyaan tidak valid]") {
+        setErrorMsg("Pertanyaan mengandung kata yang tidak diizinkan.");
+        setTimeout(() => setErrorMsg(null), 3000);
+        return;
+      }
 
       setInput("");
+
       const detectedSection = autoNavigateToSection(query);
 
       setMessages((prev) => [...prev, { role: "user", content: query }]);
@@ -347,9 +397,7 @@ export default function AIBrain() {
       try {
         const encryptionKey = process.env.NEXT_PUBLIC_ENCRYPTION_KEY;
         if (!encryptionKey) {
-          throw new Error(
-            "Kunci enkripsi (NEXT_PUBLIC_ENCRYPTION_KEY) tidak dikonfigurasi di client.",
-          );
+          throw new Error("Kunci enkripsi tidak dikonfigurasi.");
         }
 
         const encryptedPayload = await encryptPayload(
@@ -367,11 +415,41 @@ export default function AIBrain() {
           body: JSON.stringify({ payload: encryptedPayload }),
         });
 
-        if (!response.ok || !response.body) {
+        const contentType = response.headers.get("content-type") || "";
+        console.log("Response status:", response.status);
+        console.log("Content-Type:", contentType);
+
+        if (response.status === 429) {
+          const data = await response.json();
+          setErrorMsg(
+            data.error || "Terlalu banyak permintaan. Tunggu sebentar.",
+          );
+          setIsGenerating(false);
+          return;
+        }
+
+        if (!response.ok) {
           const errorText = await response.text();
           throw new Error(
-            JSON.parse(errorText).error || "Failed to get response stream",
+            JSON.parse(errorText).error || "Gagal mendapatkan respons",
           );
+        }
+
+        if (contentType.includes("application/json")) {
+          const data = await response.json();
+          console.log("JSON response:", data);
+          const assistantMsg =
+            data.response || data.message || "Maaf, terjadi kesalahan.";
+          setMessages((prev) => [
+            ...prev,
+            { role: "assistant", content: assistantMsg },
+          ]);
+          setIsGenerating(false);
+          return;
+        }
+
+        if (!response.body) {
+          throw new Error("Tidak ada body response");
         }
 
         setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
@@ -401,12 +479,13 @@ export default function AIBrain() {
           }
         }
       } catch (err) {
+        console.error("Chat error:", err);
         setErrorMsg(err instanceof Error ? err.message : String(err));
       } finally {
         setIsGenerating(false);
       }
     },
-    [input, isGenerating, profileContext, autoNavigateToSection, setMessages],
+    [input, isGenerating, profileContext, autoNavigateToSection],
   );
 
   const highlightKeywords = (text: string) => {
@@ -441,7 +520,6 @@ export default function AIBrain() {
       ),
     );
   };
-
   return (
     <>
       <style>{`
@@ -483,6 +561,7 @@ export default function AIBrain() {
         .message-bubble strong { font-weight: 600; color: #007AFF; }
         .ai-brain-input::placeholder { color: ${isLight ? "rgba(28,28,30,0.35)" : "rgba(245,245,247,0.35)"}; }
       `}</style>
+
       <button
         type="button"
         onClick={() => setIsOpen((prev) => !prev)}
@@ -528,7 +607,6 @@ export default function AIBrain() {
         </AnimatePresence>
       </button>
 
-      {/* Widget chat */}
       {isOpen && (
         <div
           className="ai-brain-container message-fade fixed bottom-24 right-6 sm:bottom-28 sm:right-6 z-40 w-[calc(100vw-2.5rem)] max-w-sm h-[60vh] max-h-[80vh] rounded-2xl shadow-2xl overflow-hidden flex flex-col"
@@ -540,7 +618,6 @@ export default function AIBrain() {
           }}
         >
           <div className="flex flex-col h-full">
-            {/* Header iOS style */}
             <header
               className={`px-4 py-3 border-b ${headerBorder} flex items-center justify-between flex-shrink-0`}
             >
@@ -564,8 +641,6 @@ export default function AIBrain() {
                 Tutup
               </button>
             </header>
-
-            {/* Daftar pesan */}
             <div
               className="ai-brain-scrollbar flex-1 overflow-y-auto p-4 space-y-3"
               style={{ minHeight: 0 }}
@@ -641,21 +716,38 @@ export default function AIBrain() {
               )}
               <div ref={messagesEndRef} />
             </div>
+
             <form
               onSubmit={handleSubmit}
               className={`border-t ${headerBorder} p-3 flex gap-2 flex-shrink-0`}
             >
               <input
                 value={input}
-                onChange={(e) => setInput(e.target.value)}
+                onChange={(e) => {
+                  const sanitized = sanitizeClientInput(e.target.value);
+                  setInput(sanitized);
+                }}
+                onPaste={(e) => {
+                  const pasted = e.clipboardData.getData("text");
+                  const sanitized = sanitizeClientInput(pasted);
+                  if (sanitized !== pasted) {
+                    e.preventDefault();
+                    setInput(sanitized);
+                  }
+                }}
                 disabled={isGenerating}
                 placeholder="Tanya sesuatu..."
                 className="ai-brain-input flex-1 border-0 rounded-full px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-[#007AFF] disabled:opacity-50 transition"
                 style={{ backgroundColor: inputBg, color: textPrimary }}
+                maxLength={2000}
               />
               <button
                 type="submit"
-                disabled={isGenerating || !input.trim()}
+                disabled={
+                  isGenerating ||
+                  !input.trim() ||
+                  input === "[Pertanyaan tidak valid]"
+                }
                 className="px-4 py-2 rounded-full bg-[#007AFF] text-white text-sm font-medium disabled:opacity-50 transition"
               >
                 {isGenerating ? "..." : "Kirim"}

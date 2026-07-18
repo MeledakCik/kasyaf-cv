@@ -8,7 +8,7 @@ import { ArrowRight, GitGraph, Link2OffIcon, Mail } from "lucide-react";
 export default function Hero() {
   return (
     <section
-      id="top"
+      id="profile"
       className="relative flex min-h-screen items-center justify-center overflow-hidden px-4 sm:px-6 py-20"
     >
       <div className="relative z-10 container mx-auto max-w-6xl">

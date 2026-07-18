@@ -22,14 +22,13 @@ export async function encryptPayload(
     false,
     ["encrypt"],
   );
-  const iv = crypto.getRandomValues(new Uint8Array(12)); // IV 12-byte untuk AES-GCM
+  const iv = crypto.getRandomValues(new Uint8Array(12)); 
   const encryptedData = await crypto.subtle.encrypt(
     { name: "AES-GCM", iv },
     key,
     new TextEncoder().encode(JSON.stringify(payload)),
   );
 
-  // Gabungkan IV dan data terenkripsi, lalu encode ke Base64
   const combined = new Uint8Array(iv.length + encryptedData.byteLength);
   combined.set(iv);
   combined.set(new Uint8Array(encryptedData), iv.length);

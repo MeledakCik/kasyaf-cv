@@ -7,7 +7,6 @@ import { useRouter } from "next/navigation";
 import LoadingScreen from "@/components/LoadingScreen";
 import { RippleButton } from "./ui/ripple-button";
 
-// Ikon (tetap sama, hanya ukuran responsif)
 const AboutIcon = () => (
   <svg
     viewBox="0 0 24 24"
@@ -66,7 +65,6 @@ const NAVIGATE_ROUTES: Record<string, string> = {
   templates: "/template",
 };
 
-// Animasi container dan kartu (tetap)
 const containerVariants = {
   hidden: { opacity: 0 },
   visible: {
@@ -86,7 +84,6 @@ const cardVariants = {
   },
 } as const;
 
-// ========== BACK BUTTON ==========
 const BackButton = ({ onClick }: { onClick: () => void }) => {
   const text = "back to the beginning".split("");
   return (
@@ -137,7 +134,6 @@ const BackButton = ({ onClick }: { onClick: () => void }) => {
   );
 };
 
-// ========== MAIN COMPONENT ==========
 export default function AboutSection({ onClose }: { onClose: () => void }) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -164,7 +160,6 @@ export default function AboutSection({ onClose }: { onClose: () => void }) {
                  flex flex-col items-center justify-center 
                  overflow-hidden px-3 py-2 sm:px-6 sm:py-8 md:px-8 md:py-12"
     >
-      {/* Background */}
       <motion.div
         className="fixed inset-0 pointer-events-none -z-10"
         initial={{ opacity: 0 }}
@@ -245,15 +240,12 @@ export default function AboutSection({ onClose }: { onClose: () => void }) {
                       WebkitBackdropFilter: "blur(24px)",
                     }}
                   >
-                    {/* Efek glow pada hover */}
                     <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
 
-                    {/* Icon */}
                     <div className="flex-shrink-0 opacity-90 flex items-center justify-center transition-transform duration-300 group-hover:scale-105">
                       {card.icon}
                     </div>
 
-                    {/* Title */}
                     <h2 className="text-sm sm:text-xl md:text-2xl 
                                    font-light tracking-wide 
                                    text-white/90 drop-shadow-lg 
@@ -261,7 +253,6 @@ export default function AboutSection({ onClose }: { onClose: () => void }) {
                       {card.title}
                     </h2>
 
-                    {/* Indikator interaktif */}
                     <div className="absolute bottom-3 left-1/2 -translate-x-1/2 w-0 h-0.5 bg-white/30 rounded-full transition-all duration-300 group-hover:w-1/3" />
                   </motion.div>
                 );
@@ -270,8 +261,6 @@ export default function AboutSection({ onClose }: { onClose: () => void }) {
           )
         )}
       </AnimatePresence>
-
-      {/* Tombol Back */}
       {!isLoading && (
         <motion.div
           initial={{ opacity: 0, y: 20 }}

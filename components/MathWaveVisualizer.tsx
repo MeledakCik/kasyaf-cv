@@ -147,7 +147,6 @@ export default function MathWaveVisualizer() {
   const updateFormulaRef = useRef<(() => void) | null>(null);
   const loopRef = useRef<(() => void) | null>(null);
 
-  // ===== RESIZE =====
   const resize = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -180,7 +179,6 @@ export default function MathWaveVisualizer() {
     }
   }, []);
 
-  // ===== INIT STARS & PARTICLES =====
   const initStars = useCallback(() => {
     const { W, H } = visualStateRef.current;
     const stars: Star[] = [];
@@ -217,7 +215,6 @@ export default function MathWaveVisualizer() {
     visualStateRef.current.mathParticles = particles;
   }, []);
 
-  // ===== GET BAND =====
   const getBand = useCallback((i: number): number => {
     const dataArrayFreq = dataArrayFreqRef.current;
     if (!dataArrayFreq) return 0;
@@ -229,12 +226,10 @@ export default function MathWaveVisualizer() {
     return sum / size;
   }, []);
 
-  // ===== UTILITY =====
   const lerp = (a: number, b: number, t: number): number => a + (b - a) * t;
   const clamp = (v: number, mn: number, mx: number): number =>
     Math.max(mn, Math.min(mx, v));
 
-  // ===== UPDATE FORMULA =====
   const updateFormula = useCallback(() => {
     const formulas = [
       "f(x) = A sin(ωx + φ)",
@@ -262,7 +257,6 @@ export default function MathWaveVisualizer() {
 
   updateFormulaRef.current = updateFormula;
 
-  // ===== UPDATE BPM =====
   const updateBpm = useCallback((now: number, energy: number) => {
     const vs = visualStateRef.current;
     if (energy > 80 && now - vs.lastBpmTime > 150) {
@@ -287,7 +281,6 @@ export default function MathWaveVisualizer() {
     }
   }, []);
 
-  // ===== DRAW FUNCTIONS =====
   const drawGalaxy = useCallback((time: number, kick: number) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -575,7 +568,6 @@ export default function MathWaveVisualizer() {
     }
   }, []);
 
-  // ===== MAIN LOOP =====
   const loop = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -707,7 +699,6 @@ export default function MathWaveVisualizer() {
       let url = source || "";
 
       try {
-        // ---- SAME SOURCE SELECTION LOGIC ----
         if (sourceMode === "file") {
           const file = fileInputRef.current?.files?.[0];
           if (!file) {
@@ -745,13 +736,11 @@ export default function MathWaveVisualizer() {
           return;
         }
 
-        // ---- HIDE UI ----
         const uiElement = document.getElementById("ui");
         if (uiElement) uiElement.style.display = "none";
         document.getElementById("mediaControls")?.classList.add("show");
         document.getElementById("topRight")?.classList.add("show");
 
-        // ---- FUNGSI LOAD MEDIA (PROMISE) ----
         const loadMedia = (
           element: HTMLMediaElement,
           src: string,
@@ -809,7 +798,6 @@ export default function MathWaveVisualizer() {
           });
         };
 
-        // ---- COBA AUDIO DULU ----
         let mediaElement: HTMLMediaElement;
         let isVideo = false;
         try {
@@ -832,7 +820,6 @@ export default function MathWaveVisualizer() {
           }
         }
 
-        // ---- SETUP AUDIO CONTEXT & ANALYSER ----
         if (!audioCtxRef.current) {
           audioCtxRef.current = new (
             window.AudioContext || (window as any).webkitAudioContext
@@ -861,7 +848,6 @@ export default function MathWaveVisualizer() {
         mediaElementRef.current = mediaElement;
         isVideoRef.current = isVideo;
 
-        // ---- UPDATE STATE ----
         const vs = visualStateRef.current;
         vs.started = true;
         vs.isPaused = false;
@@ -902,7 +888,6 @@ export default function MathWaveVisualizer() {
 
   startVisualizationRef.current = startVisualization;
 
-  // ===== HANDLE CONVERT =====
   const handleConvert = useCallback(async () => {
     const url = socialUrlInputRef.current?.value.trim();
     if (!url) {
@@ -940,7 +925,6 @@ export default function MathWaveVisualizer() {
 
       console.log("🎵 Final Media URL:", mediaUrl);
 
-      // Mulai visualisasi otomatis setelah convert sukses.
       if (startVisualizationRef.current) {
         await startVisualizationRef.current(mediaUrl);
       }
@@ -953,8 +937,6 @@ export default function MathWaveVisualizer() {
       setIsConverting(false);
     }
   }, []);
-
-  // ===== HANDLE UPLOAD =====
   const handleUpload = useCallback(() => {
     if (sourceMode === "file") {
       if (!fileInputRef.current?.files?.[0]) {
@@ -983,7 +965,6 @@ export default function MathWaveVisualizer() {
     }
   }, [sourceMode, convertedMediaUrl]);
 
-  // ===== CONTROLS =====
   const togglePlayPause = useCallback(() => {
     const vs = visualStateRef.current;
     if (!vs.started || !mediaElementRef.current) return;
@@ -1085,7 +1066,6 @@ export default function MathWaveVisualizer() {
     }
   }, [playlist, currentTrackIndex, isShuffling, started]);
 
-  // ===== INITIAL SETUP =====
   useEffect(() => {
     resize();
     initStars();
@@ -1108,7 +1088,6 @@ export default function MathWaveVisualizer() {
     };
   }, [resize, initStars, initParticles]);
 
-  // ===== RENDER =====
   return (
     <div className="relative w-full h-full bg-[#05050f] overflow-hidden">
       <video
