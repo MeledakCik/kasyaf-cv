@@ -3,10 +3,9 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   devIndicators: false,
-  productionBrowserSourceMaps: false, // BIAR GAK BISA VIEW SOURCE ASLI
+  productionBrowserSourceMaps: false,
   
   compiler: {
-    // HAPUS SEMUA console.log di production biar gak bocor kode
     removeConsole: process.env.NODE_ENV === 'production' ? { exclude: ['error', 'warn'] } : false,
   },
 
@@ -18,14 +17,12 @@ const nextConfig: NextConfig = {
       fs: false,
       path: false,
     };
-    
     if (!dev) {
       config.optimization = {
         ...config.optimization,
         minimize: true,
       };
     }
-    
     return config;
   },
 
@@ -36,6 +33,12 @@ const nextConfig: NextConfig = {
         headers: [
           { key: 'X-Content-Type-Options', value: 'nosniff' },
           { key: 'X-Frame-Options', value: 'DENY' },
+          { key: 'X-DNS-Prefetch-Control', value: 'off' },
+          { key: 'X-Download-Options', value: 'noopen' },
+          { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+          { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(), payment=(), usb=(), magnetometer=(), gyroscope=()' },
+          { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' },
+          { key: 'X-Permitted-Cross-Domain-Policies', value: 'none' },
         ],
       },
       {
