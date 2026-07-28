@@ -312,7 +312,7 @@ export default function AIBrain() {
           ];
           if (navWords.some((w) => message.includes(w))) {
             router.push(path);
-            return keyword; 
+            return keyword;
           }
         }
       }
@@ -372,115 +372,52 @@ export default function AIBrain() {
     [router],
   );
 
+  // GANTI SELURUH handleSubmit JADI INI
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
       e.preventDefault();
-
       const rawQuery = input.trim();
       if (!rawQuery || isGenerating) return;
-
-      const query = sanitizeClientInput(rawQuery);
-      if (query === "[Pertanyaan tidak valid]") {
-        setErrorMsg("Pertanyaan mengandung kata yang tidak diizinkan.");
-        setTimeout(() => setErrorMsg(null), 3000);
-        return;
-      }
-
+      const query = rawQuery.slice(0, 2000);
       setInput("");
-
       const detectedSection = autoNavigateToSection(query);
-
       setMessages((prev) => [...prev, { role: "user", content: query }]);
       setIsGenerating(true);
       setErrorMsg(null);
 
       try {
-        const encryptionKey = process.env.NEXT_PUBLIC_ENCRYPTION_KEY;
-        if (!encryptionKey) {
-          throw new Error("Kunci enkripsi tidak dikonfigurasi.");
-        }
-
-        const encryptedPayload = await encryptPayload(
-          {
-            message: query,
-            profileContext: profileContext,
-            detectedSection: detectedSection,
-          },
-          encryptionKey,
-        );
-
         const response = await fetch("/api/chat-ai", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ payload: encryptedPayload }),
+          body: JSON.stringify({
+            message: query,
+            detectedSection,
+            _ts: Date.now(),
+            _nonce: crypto.randomUUID(),
+          }),
         });
 
-        const contentType = response.headers.get("content-type") || "";
-        console.log("Response status:", response.status);
-        console.log("Content-Type:", contentType);
-
-        if (response.status === 429) {
-          const data = await response.json();
-          setErrorMsg(
-            data.error || "Terlalu banyak permintaan. Tunggu sebentar.",
-          );
-          setIsGenerating(false);
-          return;
-        }
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          throw new Error(
-            JSON.parse(errorText).error || "Gagal mendapatkan respons",
-          );
-        }
-
-        if (contentType.includes("application/json")) {
-          const data = await response.json();
-          console.log("JSON response:", data);
-          const assistantMsg =
-            data.response || data.message || "Maaf, terjadi kesalahan.";
-          setMessages((prev) => [
-            ...prev,
-            { role: "assistant", content: assistantMsg },
-          ]);
-          setIsGenerating(false);
-          return;
-        }
-
-        if (!response.body) {
-          throw new Error("Tidak ada body response");
-        }
-
+        if (!response.ok)
+          throw new Error((await response.json()).error || "Gagal");
         setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
-
-        const reader = response.body.getReader();
+        const reader = response.body!.getReader();
         const decoder = new TextDecoder();
-        let done = false;
-
-        while (!done) {
-          const { value, done: readerDone } = await reader.read();
-          done = readerDone;
-          const chunk = decoder.decode(value, { stream: true });
-
-          if (chunk) {
-            setMessages((prevMessages) => {
-              const lastMessage = prevMessages[prevMessages.length - 1];
-              if (lastMessage && lastMessage.role === "assistant") {
-                const updatedMessages = [...prevMessages];
-                updatedMessages[updatedMessages.length - 1] = {
-                  ...lastMessage,
-                  content: lastMessage.content + chunk,
-                };
-                return updatedMessages;
-              }
-              return prevMessages;
-            });
-          }
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          const chunk = decoder.decode(value);
+          setMessages((prev) => {
+            const last = prev[prev.length - 1];
+            const updated = [...prev];
+            updated[updated.length - 1] = {
+              ...last,
+              content: last.content + chunk,
+            };
+            return updated;
+          });
         }
-      } catch (err) {
-        console.error("Chat error:", err);
-        setErrorMsg(err instanceof Error ? err.message : String(err));
+      } catch (err: any) {
+        setErrorMsg(err.message);
       } finally {
         setIsGenerating(false);
       }

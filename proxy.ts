@@ -1,280 +1,190 @@
-// proxy.ts
+// proxy.ts - FINAL v6 FIX LOOP __Host- localhost + 429
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { verifySessionWithDevice, signSessionWithDevice, signInternalToken, hmacIdentifier } from '@/lib/auth';
 
-declare global {
-  var __cleanupInterval: NodeJS.Timeout | undefined;
-}
 const VERIFY_PATH = process.env.VERIFY_PATH || '/v2/shield-verify';
 const API_PATH = process.env.API_PATH || '/api/';
 const SESSION_MAX_AGE = parseInt(process.env.SESSION_MAX_AGE || '3600');
-const SESSION_MAX_AGE_MS = SESSION_MAX_AGE * 1000;
-const SESSION_ROTATE_AFTER_MS = 15 * 60_000;
+const SESSION_ROTATE_AFTER_MS = 15 * 60 * 1000;
+
+const PUBLIC_API_PREFIXES = ['/api/health','/api/public','/api/challenge','/api/session'];
+
 const RATE_LIMIT_CONFIG: Record<string, { window: number; max: number }> = {
-  '/api/chat-ai': { window: 60_000, max: 20 },
+  '/api/chat-ai': { window: 60_000, max: 30 },
+  '/api/challenge': { window: 60_000, max: 120 }, // naikin biar gak 429
+  '/api/session': { window: 60_000, max: 60 },
   '/api/': { window: 60_000, max: 100 },
   '/': { window: 60_000, max: 200 },
 };
 
-function getRateLimitConfig(pathname: string): { window: number; max: number } {
+function getRateLimitConfig(pathname: string) {
   for (const [prefix, config] of Object.entries(RATE_LIMIT_CONFIG)) {
     if (pathname.startsWith(prefix)) return config;
   }
   return { window: 60_000, max: 100 };
 }
 
-interface RateEntry {
-  count: number;
-  lastReset: number;
-  lastSeen: number;
-}
-
+interface RateEntry { count: number; lastReset: number; lastSeen: number; }
 const rateLimitMap = new Map<string, RateEntry>();
 let lastCleanup = Date.now();
-const CLEANUP_INTERVAL_MS = 60_000;
-const ENTRY_TTL_MS = 5 * 60_000;
-const MAX_MAP_SIZE = 50_000;
 
-function cleanupRateLimitMap(now: number) {
-  for (const [key, entry] of rateLimitMap) {
-    if (now - entry.lastSeen > ENTRY_TTL_MS) rateLimitMap.delete(key);
-  }
-  if (rateLimitMap.size > MAX_MAP_SIZE) {
-    const entries = Array.from(rateLimitMap.entries()).sort((a, b) => a[1].lastSeen - b[1].lastSeen);
-    for (const [key] of entries.slice(0, rateLimitMap.size - MAX_MAP_SIZE)) rateLimitMap.delete(key);
-  }
+function logSecurityEvent(type: string, req: NextRequest, extra: any = {}) {
+  const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || '127.0.0.1';
+  console.warn(`[SECURITY] ${type} | ip=${ip} | path=${extra.pathname||req.nextUrl.pathname}`);
 }
-
-async function checkRateLimit(compositeId: string, pathname: string): Promise<boolean> {
-  try {
-    const now = Date.now();
-    if (now - lastCleanup > CLEANUP_INTERVAL_MS) {
-      cleanupRateLimitMap(now);
-      lastCleanup = now;
-    }
-
-    const config = getRateLimitConfig(pathname);
-    const entry = rateLimitMap.get(compositeId);
-    if (!entry || now - entry.lastReset > config.window) {
-      rateLimitMap.set(compositeId, { count: 1, lastReset: now, lastSeen: now });
-      return true;
-    }
-
-    entry.count += 1;
-    entry.lastSeen = now;
-    rateLimitMap.set(compositeId, entry);
-    return entry.count <= config.max;
-  } catch (err) {
-    console.error('[RateLimit] Error:', err);
-    return true; 
+function getClientIp(req: NextRequest): string {
+  return (req as any).ip || req.headers.get('cf-connecting-ip') || req.headers.get('x-real-ip') || req.headers.get('x-forwarded-for')?.split(',')[0].trim() || '127.0.0.1';
+}
+function getRateLimitConfigAndCheck(compositeId: string, pathname: string): boolean {
+  const now = Date.now();
+  const config = getRateLimitConfig(pathname);
+  const entry = rateLimitMap.get(compositeId);
+  if (!entry || now - entry.lastReset > config.window) {
+    rateLimitMap.set(compositeId, { count: 1, lastReset: now, lastSeen: now });
+    return true;
   }
+  entry.count += 1; entry.lastSeen = now;
+  return entry.count <= config.max;
 }
-
-function isBot(userAgent: string): boolean {
-  if (!userAgent) return true;
-  const ua = userAgent.toLowerCase();
-  const isBrowser = /mozilla/.test(ua) && /(chrome|firefox|safari|edge|opera)/.test(ua);
-  if (isBrowser) {
-    const botIndicators = ['bot', 'crawler', 'spider', 'scraper', 'headless', 'phantom', 'selenium', 'puppeteer'];
-    if (botIndicators.some(b => ua.includes(b))) {
-      return true;
-    }
-    return false; 
-  }
-
-  const botPatterns = [
-    /bot/i, /crawler/i, /spider/i, /scraper/i,
-    /headless/i, /phantom/i, /selenium/i, /puppeteer/i,
-    /curl/i, /wget/i, /python/i, /java/i, /perl/i,
-    /http-client/i, /axios/i, /fetch/i, /node-fetch/i,
-    /postman/i, /insomnia/i, /bruno/i,
-    /ahrefs/i, /semrush/i, /moz/i, /majestic/i,
-    /facebookexternalhit/i, /twitterbot/i,
-    /googlebot/i, /bingbot/i, /yandexbot/i,
-    /slackbot/i, /telegrambot/i, /discordbot/i,
-  ];
-  return botPatterns.some(p => p.test(ua));
+function isBot(ua: string): boolean {
+  if (!ua) return true;
+  const lower = ua.toLowerCase();
+  if (['googlebot','bingbot'].some(b=>lower.includes(b))) return false;
+  const isBrowser = /mozilla|chrome|safari|firefox|edge/i.test(lower);
+  if (isBrowser) return ['headless','phantom','selenium','puppeteer','playwright'].some(b=>lower.includes(b));
+  return /curl|wget|python|postman/i.test(lower);
 }
-
-function logSecurityEvent(event: string, details: Record<string, any>) {
-  const logEntry = {
-    timestamp: new Date().toISOString(),
-    event,
-    environment: process.env.NODE_ENV,
-    ...details,
-  };
-  console.log(JSON.stringify(logEntry));
-}
-
 function generateNonce(): string {
-  const bytes = new Uint8Array(16);
-  crypto.getRandomValues(bytes);
-  return btoa(String.fromCharCode(...bytes));
+  const bytes = crypto.getRandomValues(new Uint8Array(16));
+  let binary = ''; bytes.forEach(b=>binary+=String.fromCharCode(b));
+  return btoa(binary).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
 }
-
+function base64urlDecodeToJson(b64url: string): any {
+  try {
+    const b64 = b64url.replace(/-/g,'+').replace(/_/g,'/');
+    const binary = atob(b64);
+    return JSON.parse(new TextDecoder().decode(Uint8Array.from(binary,c=>c.charCodeAt(0))));
+  } catch { return null; }
+}
 function buildCsp(nonce: string): string {
   const isDev = process.env.NODE_ENV !== 'production';
-  const backendUrl = process.env.BACKEND_URL || 'http://localhost:8000';
-
+  const backendUrl = process.env.BACKEND_URL || 'https://melody-be-production.up.railway.app';
+  
   const scriptSrc = isDev
-    ? `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' 'unsafe-eval' 'wasm-unsafe-eval'`
-    : `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'`;
+    ? `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' 'unsafe-eval' 'unsafe-inline' 'wasm-unsafe-eval' https://cdn.jsdelivr.net https://unpkg.com`
+    : `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' 'wasm-unsafe-eval' https://cdn.jsdelivr.net https://unpkg.com`;
 
   return [
+    `base-uri 'self'`,
     `default-src 'self'`,
     scriptSrc,
-    `style-src 'self' 'unsafe-inline'`,
+    `style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net https://unpkg.com`,
+    `font-src 'self' data: https://fonts.gstatic.com https://cdn.jsdelivr.net https://unpkg.com`,
     `img-src 'self' data: blob: https:`,
-    `font-src 'self' data:`,
-    `media-src 'self' ${backendUrl}`,
-    `connect-src 'self' ${backendUrl} https://api.groq.com https://*.huggingface.co https://lottie.host https://cdn.jsdelivr.net https://unpkg.com https://raw.githubusercontent.com https://*.githubusercontent.com https://*.hf.co`,
-    `worker-src 'self' blob:`,
-    `frame-ancestors 'none'`,
-    `base-uri 'self'`,
-    `form-action 'self'`,
+    `connect-src 'self' ${backendUrl} https://api.groq.com https://cdn.jsdelivr.net https://unpkg.com https://lottie.host https://*.lottiefiles.com wss://*.sylvorlabs.com wss://${backendUrl.replace('https://','')} ws://localhost:* wss://localhost:* http://localhost:* https://unpkg.com`,
+    `media-src 'self' ${backendUrl} blob:`,
     `object-src 'none'`,
-    `upgrade-insecure-requests`,
+    `frame-ancestors 'none'`,
+    `form-action 'self'`,
+    `worker-src 'self' blob: https://cdn.jsdelivr.net https://unpkg.com`,
   ].join('; ');
 }
-
-function setSecurityHeaders(res: NextResponse, nonce: string) {
+function setSecurityHeaders(res: NextResponse, nonce: string, pathname: string = '') {
+  res.headers.delete('x-powered-by');
+  const isImage = pathname.startsWith('/_next/image') || pathname.match(/\.(png|jpg|webp|svg|woff2?)$/);
   res.headers.set('Content-Security-Policy', buildCsp(nonce));
-  res.headers.set('x-nonce', nonce);
-  res.headers.set('X-Frame-Options', 'DENY');
-  res.headers.set('X-Content-Type-Options', 'nosniff');
-  res.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
-  res.headers.set('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
-  if (process.env.NODE_ENV === 'production') {
-    res.headers.set(
-      'Strict-Transport-Security',
-      'max-age=31536000; includeSubDomains; preload'
-    );
-  }
+  res.headers.set('X-Content-Type-Options','nosniff'); res.headers.set('X-Frame-Options','DENY');
+  res.headers.set('Cross-Origin-Embedder-Policy', isImage?'unsafe-none':'credentialless');
+  res.headers.set('Cross-Origin-Resource-Policy', isImage?'cross-origin':'same-site');
+  res.headers.set('Cross-Origin-Opener-Policy','same-origin'); res.headers.set('X-Cik-Guard','active');
+  if (process.env.NODE_ENV==='production') res.headers.set('Strict-Transport-Security','max-age=63072000; includeSubDomains; preload');
 }
 
 export async function proxy(request: NextRequest) {
-  try {
-    const nonce = generateNonce();
-    const { pathname } = request.nextUrl;
-    const ua = request.headers.get('user-agent') || '';
-    const ip = request.headers.get('x-forwarded-for')?.split(',')[0] || '127.0.0.1';
-    const SECRET_KEY = process.env.COOKIE_SECRET;
+  const nonce = generateNonce();
+  const { pathname } = request.nextUrl;
+  const ua = request.headers.get('user-agent')||'';
+  const ip = getClientIp(request);
+  const SECRET_KEY = process.env.COOKIE_SECRET!;
+  const isProd = process.env.NODE_ENV==='production';
 
-    if (!SECRET_KEY) {
-      console.error('[Security] COOKIE_SECRET tidak tersedia');
-      const res = new NextResponse('Server configuration error', { status: 500 });
-      setSecurityHeaders(res, nonce);
-      return res;
-    }
-
-    if (isBot(ua)) {
-      logSecurityEvent('BOT_BLOCKED', { ip, pathname, ua: ua.substring(0, 100) });
-      const res = new NextResponse('Access Denied', { status: 403 });
-      setSecurityHeaders(res, nonce);
-      return res;
-    }
-
-    const sessionIdRaw = request.cookies.get('session_id')?.value || 'no-session';
-    const compositeId = await hmacIdentifier(SECRET_KEY, `${ip}:${ua}:${sessionIdRaw}`);
-    const isAllowed = await checkRateLimit(compositeId, pathname);
-
-    if (!isAllowed) {
-      logSecurityEvent('RATE_LIMIT_EXCEEDED', { ip, pathname, sessionId: sessionIdRaw });
-      const res = new NextResponse('Too Many Requests', { status: 429 });
-      setSecurityHeaders(res, nonce);
-      return res;
-    }
-
-    if (pathname.startsWith(API_PATH)) {
-      const headers = new Headers(request.headers);
-      headers.set('x-nonce', nonce);
-      const sessionId = request.cookies.get('session_id')?.value || 'anonymous';
-      headers.set('x-session-id', sessionId);
-      const res = NextResponse.next({ request: { headers } });
-      setSecurityHeaders(res, nonce);
-      return res;
-    }
-
-    if (
-      pathname.startsWith(VERIFY_PATH) ||
-      pathname.startsWith('/_next') ||
-      pathname.includes('.')
-    ) {
-      const headers = new Headers(request.headers);
-      headers.set('x-nonce', nonce);
-      const res = NextResponse.next({ request: { headers } });
-      setSecurityHeaders(res, nonce);
-      return res;
-    }
-
-    const sessionId = request.cookies.get('session_id')?.value;
-    const deviceId = request.cookies.get('device_id')?.value;
-    const timestamp = request.cookies.get('__cik_ts')?.value;
-    const savedFingerprint = request.cookies.get('__cik_fp')?.value;
-
-    const rawSessionId = await verifySessionWithDevice(sessionId, deviceId);
-    const isValidSession = rawSessionId !== null;
-    const isFingerprintValid = savedFingerprint === btoa(ua).substring(0, 16);
-    const isExpired = timestamp ? Date.now() - parseInt(timestamp) > SESSION_MAX_AGE_MS : true;
-
-    if (!isValidSession || !isFingerprintValid || isExpired) {
-      logSecurityEvent('SESSION_INVALID', {
-        ip,
-        pathname,
-        reason: !isValidSession ? 'invalid' : !isFingerprintValid ? 'fingerprint' : 'expired'
-      });
-      const response = NextResponse.redirect(new URL(VERIFY_PATH, request.url));
-      ['session_id', 'device_id', 'surt', 'did', 'dpr', 'ckstoken', '__cik_fp', '__cik_ts'].forEach(
-        (c) => response.cookies.delete(c)
-      );
-      setSecurityHeaders(response, nonce);
-      return response;
-    }
-
-    const requestHeaders = new Headers(request.headers);
-    requestHeaders.set('x-internal-auth', await signInternalToken(sessionId as string, pathname));
-    requestHeaders.set('x-nonce', nonce);
-    requestHeaders.set('x-session-id', sessionId as string);
-
-    const response = NextResponse.next({ request: { headers: requestHeaders } });
-
-    const sessionIssuedAt = parseInt(timestamp || '0');
-    if (Date.now() - sessionIssuedAt > SESSION_ROTATE_AFTER_MS) {
-      const newRawSessionId = crypto.randomUUID().replace(/-/g, '');
-      const newSignedSession = await signSessionWithDevice(newRawSessionId, deviceId as string);
-
-      response.cookies.set('session_id', newSignedSession, {
-        path: '/', sameSite: 'strict', secure: true, httpOnly: true,
-        maxAge: SESSION_MAX_AGE,
-      });
-      response.cookies.set('__cik_ts', Date.now().toString(), {
-        path: '/', sameSite: 'strict', secure: true,
-        maxAge: SESSION_MAX_AGE,
-      });
-      response.cookies.set('__cik_fp', btoa(ua).substring(0, 16), {
-        path: '/', sameSite: 'strict', secure: true,
-        maxAge: SESSION_MAX_AGE,
-      });
-    }
-
-    setSecurityHeaders(response, nonce);
-    return response;
-  } catch (error) {
-    console.error('[Proxy] Unhandled error:', error);
-    const nonce = generateNonce();
-    const res = new NextResponse('Internal Server Error', { status: 500 });
-    setSecurityHeaders(res, nonce);
-    return res;
+  if (Date.now()-lastCleanup>60_000) {
+    for (const [k,v] of rateLimitMap) if (Date.now()-v.lastSeen>5*60_000) rateLimitMap.delete(k);
+    lastCleanup = Date.now();
   }
+
+  if (isBot(ua)) {
+    logSecurityEvent('BOT_BLOCKED', request, { pathname });
+    const res = new NextResponse('Access Denied',{status:403}); setSecurityHeaders(res,nonce,pathname); return res;
+  }
+
+  // FIX 429: untuk challenge/session pakai IP doang, bukan ip+ua+session
+  const isPublicChallenge = pathname.startsWith('/api/challenge') || pathname.startsWith('/api/session');
+  const sessionIdRaw = request.cookies.get('__Host-session_id')?.value || request.cookies.get('session_id')?.value || 'no-session';
+  const compositeId = await hmacIdentifier(SECRET_KEY, isPublicChallenge? `${ip}:${pathname}` : `${ip}:${ua}:${sessionIdRaw}`);
+
+  if (!getRateLimitConfigAndCheck(compositeId, pathname)) {
+    logSecurityEvent('RATE_LIMIT', request, { pathname });
+    const res = new NextResponse('Too Many Requests',{status:429}); setSecurityHeaders(res,nonce,pathname); return res;
+  }
+
+  if (pathname.startsWith(VERIFY_PATH) || pathname.startsWith('/_next') || pathname.startsWith('/images') || pathname.includes('.') || pathname==='/favicon.ico') {
+    const res = NextResponse.next({ request: { headers: new Headers({...Object.fromEntries(request.headers),'x-nonce':nonce}) } });
+    setSecurityHeaders(res,nonce,pathname); return res;
+  }
+
+  const isPublicApi = PUBLIC_API_PREFIXES.some(p=>pathname.startsWith(p));
+  if (pathname.startsWith(API_PATH)) {
+    if (isPublicApi) {
+      const res = NextResponse.next({ request: { headers: new Headers({...Object.fromEntries(request.headers),'x-nonce':nonce}) } });
+      setSecurityHeaders(res,nonce,pathname); return res;
+    }
+    const sessionId = request.cookies.get('__Host-session_id')?.value || request.cookies.get('session_id')?.value;
+    const deviceId = request.cookies.get('__Host-device_id')?.value || request.cookies.get('device_id')?.value;
+    const verifiedSid = await verifySessionWithDevice(sessionId, deviceId, ua);
+    if (!verifiedSid) {
+      const res = new NextResponse('Unauthorized',{status:401}); setSecurityHeaders(res,nonce,pathname); return res;
+    }
+    const headers = new Headers(request.headers); 
+    headers.set('x-nonce',nonce); 
+    headers.set('x-session-id',verifiedSid); 
+    headers.set('x-internal-auth', await signInternalToken(verifiedSid, pathname)); // <-- INI YANG BENER
+    const res = NextResponse.next({ request: { headers } }); 
+    setSecurityHeaders(res,nonce,pathname); 
+    return res; return res;
+  }
+
+  const deviceId = request.cookies.get('__Host-device_id')?.value || request.cookies.get('device_id')?.value;
+  const sessionId = request.cookies.get('__Host-session_id')?.value || request.cookies.get('session_id')?.value;
+  const rawSessionId = await verifySessionWithDevice(sessionId, deviceId, ua);
+
+  if (!rawSessionId) {
+    logSecurityEvent('PAGE_NO_SESSION_REDIRECT', request, { pathname });
+    const response = NextResponse.redirect(new URL(VERIFY_PATH, request.url));
+    ['session_id','device_id','__Host-session_id','__Host-device_id'].forEach(c=>response.cookies.delete(c));
+    setSecurityHeaders(response,nonce,pathname); return response;
+  }
+
+  let issuedAt = 0;
+  if (sessionId) { const payload = base64urlDecodeToJson(sessionId.split('.')[0]); if (payload?.iat) issuedAt = payload.iat; }
+
+  const requestHeaders = new Headers(request.headers); requestHeaders.set('x-nonce',nonce); requestHeaders.set('x-session-id',rawSessionId); requestHeaders.set('x-internal-auth', await signInternalToken(sessionId!, pathname));
+  const response = NextResponse.next({ request: { headers: requestHeaders } });
+
+  if (Date.now()-issuedAt > SESSION_ROTATE_AFTER_MS) {
+    const newRaw = crypto.randomUUID().replace(/-/g,'');
+    const newSigned = await signSessionWithDevice(newRaw, deviceId!, ua);
+    // FIX LOOP: di prod pakai __Host- + secure true, di dev pakai biasa + secure false
+    if (isProd) {
+      response.cookies.set('__Host-session_id', newSigned, { path:'/', sameSite:'strict', secure:true, httpOnly:true, maxAge:SESSION_MAX_AGE });
+      response.cookies.delete('session_id');
+    } else {
+      response.cookies.set('session_id', newSigned, { path:'/', sameSite:'strict', secure:false, httpOnly:true, maxAge:SESSION_MAX_AGE });
+    }
+  }
+
+  setSecurityHeaders(response,nonce,pathname); return response;
 }
 
-if (typeof globalThis.__cleanupInterval === 'undefined') {
-  globalThis.__cleanupInterval = setInterval(() => {
-    cleanupRateLimitMap(Date.now());
-  }, CLEANUP_INTERVAL_MS);
-}
-
-export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
-};
+export const config = { matcher: ['/((?!_next/static|_next/image|images|img|assets|fonts|favicon.ico).*)'] };
