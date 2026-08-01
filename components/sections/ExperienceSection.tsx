@@ -1,7 +1,13 @@
 "use client";
 
-import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useState, useRef } from "react";
+import {
+  motion,
+  AnimatePresence,
+  useMotionValue,
+  useSpring,
+  useTransform,
+} from "framer-motion";
 import {
   Shield,
   Code,
@@ -33,6 +39,140 @@ const poppins = Poppins({
 
 const icons: Record<string, any> = { shield: Shield, code: Code, bot: Bot };
 
+interface TechIcon3DProps {
+  name: string;
+  icon: any;
+  color?: string;
+  index?: number;
+}
+
+// TechIcon3D dengan Ukuran Lebih Compact, Rapi, & Efek Comet / Rocket Trail
+function TechIcon3D({
+  name,
+  icon: IconComponent,
+  color = "#8b5cf6",
+  index = 0,
+}: TechIcon3DProps) {
+  const ref = useRef<HTMLDivElement>(null);
+  const x = useMotionValue(0);
+  const y = useMotionValue(0);
+
+  const mouseXSpring = useSpring(x, { stiffness: 200, damping: 15 });
+  const mouseYSpring = useSpring(y, { stiffness: 200, damping: 15 });
+
+  const rotateX = useTransform(mouseYSpring, [-0.5, 0.5], ["12deg", "-12deg"]);
+  const rotateY = useTransform(mouseXSpring, [-0.5, 0.5], ["-12deg", "12deg"]);
+
+  const spotlightX = useMotionValue(50);
+  const spotlightY = useMotionValue(50);
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!ref.current) return;
+    const rect = ref.current.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+    x.set(mouseX / rect.width - 0.5);
+    y.set(mouseY / rect.height - 0.5);
+    spotlightX.set((mouseX / rect.width) * 100);
+    spotlightY.set((mouseY / rect.height) * 100);
+  };
+
+  const handleMouseLeave = () => {
+    x.set(0);
+    y.set(0);
+    spotlightX.set(50);
+    spotlightY.set(50);
+  };
+
+  return (
+    <motion.div
+      ref={ref}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
+      style={{ rotateX, rotateY, transformStyle: "preserve-3d" }}
+      initial={{ opacity: 0, y: 15, scale: 0.9 }}
+      animate={{
+        opacity: 1,
+        y: [0, -3, 0],
+        scale: 1,
+      }}
+      transition={{
+        opacity: { delay: index * 0.04, duration: 0.3 },
+        y: {
+          delay: index * 0.04,
+          duration: 3 + Math.random() * 2,
+          repeat: Infinity,
+          ease: "easeInOut",
+        },
+        scale: { delay: index * 0.04, duration: 0.3 },
+      }}
+      whileHover={{ scale: 1.04 }}
+      whileTap={{ scale: 0.96 }}
+      className="relative group cursor-pointer perspective-1000"
+    >
+      {/* Ambient Back Glow */}
+      <motion.div
+        className="absolute inset-0 rounded-xl blur-xl -z-10 opacity-0 group-hover:opacity-35 transition-opacity duration-500 pointer-events-none"
+        style={{
+          backgroundColor: color,
+          transform: "translateZ(-15px)",
+        }}
+      />
+
+      {/* Kartu Utama */}
+      <div
+        style={{ transform: "translateZ(40px)" }}
+        className="relative flex flex-col items-center justify-center gap-2 p-3.5 rounded-xl bg-[#101011] border border-white/[0.06] group-hover:border-white/[0.15] transition-all duration-300 overflow-hidden shadow-lg"
+      >
+        {/* ✨ Efek COMET / ROCKET TRAIL (Garis Cahaya Mengelilingi Border Card saat Hover) */}
+        <div className="absolute inset-0 rounded-xl pointer-events-none overflow-hidden opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+          <div
+            className="absolute -inset-[100%] animate-[spin_4s_linear_infinite]"
+            style={{
+              background: `conic-gradient(from 0deg at 50% 50%, transparent 0%, transparent 70%, ${color} 90%, #ffffff 100%)`,
+            }}
+          />
+          <div className="absolute inset-[1px] rounded-xl bg-[#101011]" />
+        </div>
+
+        {/* Spotlight Radial dalam Card */}
+        <motion.div
+          className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
+          style={{
+            background: useTransform(
+              [spotlightX, spotlightY],
+              ([latestX, latestY]) =>
+                `radial-gradient(circle 90px at ${latestX}% ${latestY}%, ${color}26, transparent 70%)`
+            ),
+          }}
+        />
+
+        {/* Shimmer sweep effect */}
+        <div className="absolute inset-0 opacity-0 group-hover:opacity-100 -translate-x-full group-hover:translate-x-full transition-all duration-1000 bg-gradient-to-r from-transparent via-white/[0.08] to-transparent skew-x-12 pointer-events-none" />
+
+        {/* Ikon Utama */}
+        <div className="relative z-10 text-white/60 group-hover:text-white transition-all duration-300 group-hover:drop-shadow-[0_0_6px_rgba(255,255,255,0.5)]">
+          <IconComponent size={22} />
+        </div>
+
+        {/* Label Nama */}
+        <span className="relative z-10 text-[10px] text-white/30 group-hover:text-white/80 font-medium tracking-wider transition-colors truncate w-full text-center">
+          {name}
+        </span>
+
+        {/* Dot Indikator Berwarna */}
+        <div
+          className="absolute top-2 right-2 w-1.5 h-1.5 rounded-full opacity-60 group-hover:opacity-100 transition-opacity"
+          style={{
+            backgroundColor: color,
+            boxShadow: `0 0 8px ${color}`,
+          }}
+        />
+      </div>
+    </motion.div>
+  );
+}
+
 export default function ExperienceSection() {
   const [activeTab, setActiveTab] = useState<"tools" | "experience">("tools");
   const [activeCert, setActiveCert] = useState<CertificateItem | null>(null);
@@ -45,7 +185,7 @@ export default function ExperienceSection() {
     },
     {
       id: 2,
-      url: "https://images.unsplash.com/photo-1605379399642-8702623c7bb5?q=80&w=600&h=400&auto=format&fit=crop",
+      url: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?q=80&w=600&h=400&auto=format&fit=crop",
       caption: "Security Auditing & Code Review",
     },
     {
@@ -69,48 +209,63 @@ export default function ExperienceSection() {
         transition={{ duration: 0.4, delay: 0.1 }}
         className="rounded-3xl bg-gradient-to-br from-[#15151f] to-[#0e0e15] border border-white/[0.07] p-1 mb-12 shadow-2xl overflow-hidden"
       >
-        <div className="rounded-[22px] bg-[#0a0a0f] p-5 sm:p-8 flex flex-col lg:flex-row gap-6 items-start justify-between">
-          {/* Text Profile Section */}
-          <div className="flex-1 text-center lg:text-left w-full">
-            <div className="flex flex-wrap items-center justify-center lg:justify-start gap-3">
-              <h1 className="text-xl sm:text-2xl font-bold text-white">
-                Kasyaf — Frontend & Security
-              </h1>
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[10px] sm:text-xs font-bold tracking-widest text-emerald-400">
-                <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" />
-                AVAILABLE FOR WORK
-              </span>
+        <div className="rounded-[22px] bg-[#0a0a0f] p-5 sm:p-8 flex flex-col md:flex-row gap-6 items-center md:items-center justify-between">
+          
+          {/* Container Kiri: Foto Profil Laki-Laki yang Disesuaikan Ukurannya + Nama & Deskripsi */}
+          <div className="flex flex-col sm:flex-row items-center sm:items-center gap-5 flex-1 w-full text-center sm:text-left">
+            
+            {/* ✨ KOTAK FOTO PROFIL LAKI-LAKI DI SEBELAH KIRI (Ukuran Proporsional & Rapi) */}
+            <div className="relative group shrink-0">
+              <div className="absolute -inset-1 rounded-2xl bg-gradient-to-r from-violet-500 to-emerald-400 opacity-40 blur-md group-hover:opacity-80 transition duration-500" />
+              <div className="relative w-28 h-28 sm:w-32 sm:h-32 rounded-2xl overflow-hidden border-2 border-white/10 bg-[#12121c] shadow-xl flex items-center justify-center">
+                <img
+                  src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=300&h=300&auto=format&fit=crop"
+                  alt="Profile Kasyaf"
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                />
+              </div>
             </div>
-            <p className="mt-3 text-sm sm:text-base leading-relaxed text-white/60 max-w-2xl mx-auto lg:mx-0">
-              Indie developer fokus di{" "}
-              <span className="text-white font-medium">
-                Web Security Audit & Frontend Performance
-              </span>
-              . Membangun tools seperti Sentinel-ID & Audit-Otomatis dengan
-              Next.js 14 + Redis.
-            </p>
-            <div className="mt-4 flex flex-wrap justify-center lg:justify-start gap-2 text-xs text-white/50">
-              <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/[0.05] border border-white/5">
-                <MapPin size={12} className="text-violet-400" /> Bandung,
-                Indonesia
-              </span>
-              <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/[0.05] border border-white/5">
-                <Mail size={12} className="text-violet-400" />{" "}
-                kasyaf@example.com
-              </span>
-              <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/[0.05] border border-white/5">
-                <User size={12} className="text-violet-400" /> 20+ Projects
-                Shipped
-              </span>
+
+            {/* Bagian Teks Identitas */}
+            <div className="flex-1">
+              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3">
+                <h1 className="text-xl sm:text-2xl font-bold text-white">
+                  Kasyaf — Frontend & Security
+                </h1>
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[10px] sm:text-xs font-bold tracking-widest text-emerald-400">
+                  <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" />
+                  AVAILABLE FOR WORK
+                </span>
+              </div>
+              <p className="mt-3 text-sm sm:text-base leading-relaxed text-white/60 max-w-2xl">
+                Indie developer fokus di{" "}
+                <span className="text-white font-medium">
+                  Web Security Audit & Frontend Performance
+                </span>
+                . Membangun tools seperti Sentinel-ID & Audit-Otomatis dengan
+                Next.js 14 + Redis.
+              </p>
+              <div className="mt-4 flex flex-wrap justify-center sm:justify-start gap-2 text-xs text-white/50">
+                <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/[0.05] border border-white/5">
+                  <MapPin size={12} className="text-violet-400" /> Bandung, Indonesia
+                </span>
+                <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/[0.05] border border-white/5">
+                  <Mail size={12} className="text-violet-400" /> kasyaf@example.com
+                </span>
+                <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/[0.05] border border-white/5">
+                  <User size={12} className="text-violet-400" /> 20+ Projects Shipped
+                </span>
+              </div>
             </div>
+
           </div>
+
         </div>
 
-        {/* Work Photos / Feature Cards Grid */}
+        {/* Work Photos Grid */}
         <div className="px-5 sm:px-8 pb-6 sm:pb-8 pt-2">
           <h3 className="text-white font-semibold text-sm flex items-center gap-2 mb-4">
-            <Sparkles size={16} className="text-violet-400" /> Behind the Code &
-            Work Session
+            <Sparkles size={16} className="text-violet-400" /> Behind the Code & Work Session
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
             {workPhotos.map((photo, index) => (
@@ -119,7 +274,7 @@ export default function ExperienceSection() {
                 initial={{ opacity: 0, y: 15 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3, delay: 0.2 + index * 0.1 }}
-                className="relative group rounded-2xl overflow-hidden border border-white/10 aspect-[16/10] bg-[#12121c]"
+                className="relative group rounded-2xl overflow-hidden border border-white/15 aspect-[16/10] bg-[#12121c]"
               >
                 <img
                   src={photo.url}
@@ -127,9 +282,7 @@ export default function ExperienceSection() {
                   className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent opacity-90 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity flex items-end p-4">
-                  <p className="text-xs text-white font-medium">
-                    {photo.caption}
-                  </p>
+                  <p className="text-xs text-white font-medium">{photo.caption}</p>
                 </div>
               </motion.div>
             ))}
@@ -273,7 +426,7 @@ export default function ExperienceSection() {
           </div>
         </div>
 
-        {/* Tools & Experience Tabs */}
+        {/* Tools & Experience Tabs with Compact Grid */}
         <div className="lg:col-span-3 rounded-2xl bg-[#10101b] border border-white/[0.06] p-6">
           <div className="flex gap-2 mb-5">
             <button
@@ -306,18 +459,16 @@ export default function ExperienceSection() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
                 transition={{ duration: 0.2 }}
-                className="grid grid-cols-3 sm:grid-cols-5 gap-3"
+                className="grid grid-cols-3 sm:grid-cols-5 gap-2.5"
               >
-                {tools.map((t) => (
-                  <div
+                {tools.map((t, index) => (
+                  <TechIcon3D
                     key={t.name}
-                    className="flex flex-col items-center justify-center gap-2 p-3 rounded-xl bg-[#0a0a0f] border border-white/[0.05] hover:border-white/10 transition-colors"
-                  >
-                    <t.Icon size={20} className="text-white/70" />
-                    <span className="text-[11px] text-white/40 font-medium text-center truncate w-full">
-                      {t.name}
-                    </span>
-                  </div>
+                    name={t.name}
+                    icon={t.Icon}
+                    color="#8b5cf6"
+                    index={index}
+                  />
                 ))}
               </motion.div>
             ) : (
@@ -351,7 +502,7 @@ export default function ExperienceSection() {
         </div>
       </div>
 
-      {/* MODAL / POPUP CERTIFICATE */}
+      {/* MODAL CERTIFICATE */}
       <AnimatePresence>
         {activeCert && (
           <motion.div
