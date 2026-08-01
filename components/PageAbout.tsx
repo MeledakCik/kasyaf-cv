@@ -63,6 +63,7 @@ const CARDS = [
 const NAVIGATE_ROUTES: Record<string, string> = {
   aboutme: "/profile",
   templates: "/template",
+  experience: "/experience",
 };
 
 const containerVariants = {
