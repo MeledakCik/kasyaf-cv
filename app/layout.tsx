@@ -3,7 +3,8 @@ import { Geist, Geist_Mono } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
 import { headers } from "next/headers";
-
+import SensorProvider from "@/components/sensor-provider";
+import { CvErrorBoundary } from "@/components/error-boundary";
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -133,7 +134,8 @@ export default async function RootLayout({
         />
       </head>
       <body className="min-h-full flex flex-col bg-black antialiased">
-        {children}
+        <SensorProvider />
+        <CvErrorBoundary>{children}</CvErrorBoundary>
       </body>
     </html>
   );
