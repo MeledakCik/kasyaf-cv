@@ -17,6 +17,7 @@ const PUBLIC_API_PREFIXES = [
 
 const RATE_LIMIT_CONFIG: Record<string, { window: number; max: number }> = {
   '/api/chat-ai': { window: 60_000, max: 30 },
+  '/api/log': { window: 60_000, max: 20 },
   '/api/challenge': { window: 60_000, max: 120 }, // naikin biar gak 429
   '/api/session': { window: 60_000, max: 60 },
   '/api/': { window: 60_000, max: 100 },
@@ -157,7 +158,7 @@ export async function proxy(request: NextRequest) {
     headers.set('x-internal-auth', await signInternalToken(verifiedSid, pathname)); // <-- INI YANG BENER
     const res = NextResponse.next({ request: { headers } }); 
     setSecurityHeaders(res,nonce,pathname); 
-    return res; return res;
+    return res;
   }
 
   const deviceId = request.cookies.get('__Host-device_id')?.value || request.cookies.get('device_id')?.value;
