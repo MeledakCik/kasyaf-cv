@@ -1,23 +1,18 @@
-// app/api/challenge/route.ts - FINAL v3 FIXED + SYLVOR HEADERS + ANTI DIRECT ACCESS
 import { NextRequest, NextResponse } from 'next/server';
 import { generateChallenge } from '@/lib/pow-challenge';
 
 const challengeHits = new Map<string, { count: number, reset: number }>();
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://kasyaf-cv.my.id';
 
 function applySylvorHeaders(res: NextResponse): NextResponse {
-  res.headers.set('Accept-CH', 'Sec-CH-UA, Sec-CH-UA-Mobile, Sec-CH-UA-Platform, Sec-CH-UA-Arch, Viewport-Width, Width, DPR');
+  res.headers.set('Accept-CH', 'Sec-CH-UA, Sec-CH-UA-Mobile, Sec-CH-UA-Platform');
   res.headers.set('Critical-CH', 'Sec-CH-UA, Sec-CH-UA-Mobile');
   res.headers.set('Accept-CH-Lifetime', '86400');
   res.headers.set('Cross-Origin-Embedder-Policy', 'credentialless');
   res.headers.set('Cross-Origin-Opener-Policy', 'same-origin');
-  res.headers.set('Cross-Origin-Resource-Policy', 'same-site');
-  res.headers.set('Origin-Agent-Cluster', '?1');
   res.headers.set('X-Content-Type-Options', 'nosniff');
   res.headers.set('X-Frame-Options', 'DENY');
   res.headers.set('Referrer-Policy', 'same-origin');
-  res.headers.set('X-Cik-Guard', 'active');
-  res.headers.set('X-Cik-Version', '2.1-secure');
   res.headers.delete('x-powered-by');
   return res;
 }
@@ -35,26 +30,40 @@ export async function GET(req: NextRequest) {
   try {
     cleanup();
 
-    // === FIX ANTI DIRECT ACCESS - CHROME BARU ===
+    const userAgent = req.headers.get('user-agent')?.toLowerCase() || '';
     const secFetchMode = req.headers.get('sec-fetch-mode');
     const secFetchSite = req.headers.get('sec-fetch-site');
     const accept = req.headers.get('accept') || '';
 
-    // Address bar: sec-fetch-mode=navigate + sec-fetch-site=none + accept=text/html
-    // Fetch dari JS: sec-fetch-mode=cors + sec-fetch-site=same-origin
-    const isDirectNavigation =
-      secFetchMode === 'navigate' ||
-      (accept.includes('text/html') && (secFetchSite === 'none' ||!secFetchSite));
+    // === FIX 1: WHITELIST BOT - JANGAN DI-BLOCK ===
+    const isBot = userAgent.includes('googlebot') ||
+                  userAgent.includes('google-inspectiontool') ||
+                  userAgent.includes('bingbot') ||
+                  userAgent.includes('chrome-lighthouse') ||
+                  userAgent.includes('gtmetrix');
 
-    if (isDirectNavigation) {
+    if (isBot) {
+      // Kasih challenge dummy biar gak error tapi gak usah POW
+      const res = NextResponse.json(
+        { challenge: 'bot-bypass', seed: 'bot', difficulty: 0, bot: true },
+        { headers: { 'Cache-Control': 'no-store' } }
+      );
+      return applySylvorHeaders(res);
+    }
+
+    // === FIX 2: ANTI DIRECT ACCESS - TAPI IZININ NAVIGATE KALAU BUKAN FETCH API ===
+    // Yang diblock cuma kalau buka /api/challenge langsung di browser
+    const isDirectApiAccess = req.nextUrl.pathname === '/api/challenge' &&
+                              secFetchMode === 'navigate' &&
+                              accept.includes('text/html');
+
+    if (isDirectApiAccess) {
       const res = NextResponse.json({ error: 'Direct access not allowed - fetch only' }, { status: 403 });
       return applySylvorHeaders(res);
     }
 
-    // === RATE LIMIT 20/menit per IP ===
-    const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-               req.headers.get('x-real-ip') ||
-               '127.0.0.1';
+    // Rate limit tetep jalan
+    const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || '127.0.0.1';
     const now = Date.now();
     const entry = challengeHits.get(ip);
 
@@ -63,7 +72,7 @@ export async function GET(req: NextRequest) {
     } else {
       entry.count++;
       if (entry.count > 20) {
-        const res = NextResponse.json({ error: 'Too many requests - slow down' }, { status: 429 });
+        const res = NextResponse.json({ error: 'Too many requests' }, { status: 429 });
         res.headers.set('Retry-After', '60');
         return applySylvorHeaders(res);
       }
