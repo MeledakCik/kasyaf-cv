@@ -86,10 +86,9 @@ export const metadata: Metadata = {
     apple: "/images/logo.png",
   },
   verification: {
-    google: "lUs2r5wjBN7sFvbwukY7aMAMNZjGRsK9TjcxdgBe2wk",
+    google: "yImAoad-DsRa1AEEZYEVhFLn2-ODwo8vwm3Gyy7e-SU",
   },
 };
-
 const jsonLd = {
   "@context": "https://schema.org",
   "@type": "Person",
