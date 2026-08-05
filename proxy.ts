@@ -135,17 +135,20 @@ export async function proxy(request: NextRequest) {
     const res = new NextResponse('Too Many Requests',{status:429}); setSecurityHeaders(res,nonce,pathname); return res;
   }
 
+  // Bypass langsung untuk endpoint Public API (seperti /api/log, /api/health, dll)
+  const isPublicApi = PUBLIC_API_PREFIXES.some(p => pathname.startsWith(p));
+  if (isPublicApi) {
+    const res = NextResponse.next({ request: { headers: new Headers({ ...Object.fromEntries(request.headers), 'x-nonce': nonce }) } });
+    setSecurityHeaders(res, nonce, pathname);
+    return res;
+  }
+
   if (pathname.startsWith(VERIFY_PATH) || pathname.startsWith('/_next') || pathname.startsWith('/images') || pathname.includes('.') || pathname==='/favicon.ico') {
     const res = NextResponse.next({ request: { headers: new Headers({...Object.fromEntries(request.headers),'x-nonce':nonce}) } });
     setSecurityHeaders(res,nonce,pathname); return res;
   }
 
-  const isPublicApi = PUBLIC_API_PREFIXES.some(p=>pathname.startsWith(p));
   if (pathname.startsWith(API_PATH)) {
-    if (isPublicApi) {
-      const res = NextResponse.next({ request: { headers: new Headers({...Object.fromEntries(request.headers),'x-nonce':nonce}) } });
-      setSecurityHeaders(res,nonce,pathname); return res;
-    }
     const sessionId = request.cookies.get('__Host-session_id')?.value || request.cookies.get('session_id')?.value;
     const deviceId = request.cookies.get('__Host-device_id')?.value || request.cookies.get('device_id')?.value;
     const verifiedSid = await verifySessionWithDevice(sessionId, deviceId, ua);
