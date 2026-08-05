@@ -7,8 +7,13 @@ const VERIFY_PATH = process.env.VERIFY_PATH || '/v2/shield-verify';
 const API_PATH = process.env.API_PATH || '/api/';
 const SESSION_MAX_AGE = parseInt(process.env.SESSION_MAX_AGE || '3600');
 const SESSION_ROTATE_AFTER_MS = 15 * 60 * 1000;
-
-const PUBLIC_API_PREFIXES = ['/api/health','/api/public','/api/challenge','/api/session'];
+const PUBLIC_API_PREFIXES = [
+  '/api/health',
+  '/api/public',
+  '/api/challenge',
+  '/api/session',
+  '/api/log'
+];
 
 const RATE_LIMIT_CONFIG: Record<string, { window: number; max: number }> = {
   '/api/chat-ai': { window: 60_000, max: 30 },
