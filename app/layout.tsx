@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
 import { headers } from "next/headers";
+
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -12,8 +13,8 @@ const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
 });
-const SITE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL || "https://kasyaf-cv-vb5o.vercel.app";
+
+const SITE_URL = "https://kasyaf-cv.my.id";
 const NAME = "Muhammad Kasyaf Anugrah";
 
 export const viewport: Viewport = {
@@ -31,49 +32,18 @@ export const metadata: Metadata = {
   description:
     "Portofolio Muhammad Kasyaf Anugrah, Full Stack Developer yang fokus di front end, back end, dan cyber security. Lihat proyek, pengalaman, dan keahlian teknis di sini.",
   keywords: [
-    "kasyaf",
-    "kasyaf anugrah",
-    "kasyaf portfolio",
-    "kasyaf cv",
-    "kasyaf resume",
-    "kasyaf github",
-    "kasyaf linkedin",
-    "kasyaf instagram",
-    "kasyaf full stack developer",
-    "kasyaf cyber security",
-    "kasyaf web developer",
-    "kasyaf front end developer",
-    "kasyaf back end developer",
     "Muhammad Kasyaf Anugrah",
-    "Muhammad Kasyaf Anugrah portfolio",
-    "Muhammad Kasyaf Anugrah cv",
-    "Muhammad Kasyaf Anugrah resume",
-    "Muhammad Kasyaf Anugrah github",
-    "Muhammad Kasyaf Anugrah linkedin",
-    "Muhammad Kasyaf Anugrah instagram",
-    "Muhammad Kasyaf Anugrah full stack developer",
-    "Muhammad Kasyaf Anugrah cyber security",
-    "Muhammad Kasyaf Anugrah web developer",
-    "Muhammad Kasyaf Anugrah front end developer",
-    "Muhammad Kasyaf Anugrah back end developer",
-    "portofolio developer",
+    "kasyaf cv",
+    "kasyaf portfolio",
     "full stack developer indonesia",
     "cyber security",
     "web developer portfolio",
-    "cv online developer",
-    "front end back end developer",
   ],
   authors: [{ name: NAME, url: SITE_URL }],
   creator: NAME,
   applicationName: `${NAME} Portfolio`,
-  category: "technology",
   alternates: {
     canonical: SITE_URL,
-  },
-  formatDetection: {
-    email: false,
-    address: false,
-    telephone: false,
   },
   robots: {
     index: true,
@@ -108,7 +78,7 @@ export const metadata: Metadata = {
     title: `${NAME} - Full Stack Developer & Cyber Security`,
     description:
       "Portofolio Muhammad Kasyaf Anugrah, Full Stack Developer yang fokus di front end, back end, dan cyber security.",
-    images: ["/images/logo.png"],
+    images: [`${SITE_URL}/images/logo.png`],
   },
   icons: {
     icon: "/images/logo.png",
@@ -118,10 +88,8 @@ export const metadata: Metadata = {
   verification: {
     google: "lUs2r5wjBN7sFvbwukY7aMAMNZjGRsK9TjcxdgBe2wk",
   },
-  other: {
-    charSet: 'utf-8',
-  },
 };
+
 const jsonLd = {
   "@context": "https://schema.org",
   "@type": "Person",
@@ -156,8 +124,6 @@ export default async function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full bg-black antialiased`}
     >
       <head>
-        <meta charSet="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
         <Script
           nonce={nonce}
           id="person-jsonld"
