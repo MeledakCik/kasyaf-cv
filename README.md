@@ -116,7 +116,7 @@ Poppins font is loaded via Next.js Font Optimization. To change the font, update
 
 **Muhammad Kasyaf Anugrah**
 
-- 🌐 Website: [kasyaf.dev](https://kasyaf-cv-vb5o.vercel.app/)
+- 🌐 Website: [kasyaf.dev](https://kasyaf-cv.my.id)
 - 🐙 GitHub: [@kasyaf](https://github.com/K4K4NG)
 - 🔗 LinkedIn: [in/kasyaf](https://linkedin.com/in/muhammad-kasyaf-anugrah/)
 - 📧 Email: kakangkasyaf@gmail.com
@@ -130,5 +130,5 @@ Poppins font is loaded via Next.js Font Optimization. To change the font, update
 - [Poppins Font](https://fonts.google.com/specimen/Poppins) - Typography
 - [Vercel](https://vercel.com) - Deployment platform
 
-*Made with ❤️ by [Muhammad Kasyaf](https://github.com/kasyaf)*
+*Made with ❤️ by [Muhammad Kasyaf](https://github.com/MeledakCik)*
 *Building secure, scalable, and beautiful web experiences.*
