@@ -116,7 +116,7 @@ Poppins font is loaded via Next.js Font Optimization. To change the font, update
 
 **Muhammad Kasyaf Anugrah**
 
-- 🌐 Website: [kasyaf.dev](https://kasyaf-cv.my.id)
+- 🌐 Website: [kasyaf-cv.my.id](https://kasyaf-cv.my.id)
 - 🐙 GitHub: [@kasyaf](https://github.com/K4K4NG)
 - 🔗 LinkedIn: [in/kasyaf](https://linkedin.com/in/muhammad-kasyaf-anugrah/)
 - 📧 Email: kakangkasyaf@gmail.com
