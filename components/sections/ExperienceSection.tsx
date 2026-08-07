@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   motion,
   AnimatePresence,
@@ -20,12 +20,15 @@ import {
   MapPin,
   Mail,
   Sparkles,
+  Briefcase,
+  Loader2,
+  Star,
+  GitFork,
 } from "lucide-react";
 import { SiGithub } from "react-icons/si";
 import { Poppins } from "next/font/google";
 import {
   mainExpertise,
-  featuredProjects,
   certificates,
   tools,
   experiences,
@@ -46,7 +49,17 @@ interface TechIcon3DProps {
   index?: number;
 }
 
-// TechIcon3D dengan Ukuran Lebih Compact, Rapi, & Efek Comet / Rocket Trail
+interface GithubRepo {
+  id: number;
+  name: string;
+  description: string | null;
+  html_url: string;
+  homepage?: string | null;
+  stargazers_count: number;
+  forks_count: number;
+  language: string | null;
+}
+
 function TechIcon3D({
   name,
   icon: IconComponent,
@@ -110,7 +123,6 @@ function TechIcon3D({
       whileTap={{ scale: 0.96 }}
       className="relative group cursor-pointer perspective-1000"
     >
-      {/* Ambient Back Glow */}
       <motion.div
         className="absolute inset-0 rounded-xl blur-xl -z-10 opacity-0 group-hover:opacity-35 transition-opacity duration-500 pointer-events-none"
         style={{
@@ -119,12 +131,10 @@ function TechIcon3D({
         }}
       />
 
-      {/* Kartu Utama */}
       <div
         style={{ transform: "translateZ(40px)" }}
         className="relative flex flex-col items-center justify-center gap-2 p-3.5 rounded-xl bg-[#101011] border border-white/[0.06] group-hover:border-white/[0.15] transition-all duration-300 overflow-hidden shadow-lg"
       >
-        {/* ✨ Efek COMET / ROCKET TRAIL (Garis Cahaya Mengelilingi Border Card saat Hover) */}
         <div className="absolute inset-0 rounded-xl pointer-events-none overflow-hidden opacity-0 group-hover:opacity-100 transition-opacity duration-300">
           <div
             className="absolute -inset-[100%] animate-[spin_4s_linear_infinite]"
@@ -135,32 +145,27 @@ function TechIcon3D({
           <div className="absolute inset-[1px] rounded-xl bg-[#101011]" />
         </div>
 
-        {/* Spotlight Radial dalam Card */}
         <motion.div
           className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
           style={{
             background: useTransform(
               [spotlightX, spotlightY],
               ([latestX, latestY]) =>
-                `radial-gradient(circle 90px at ${latestX}% ${latestY}%, ${color}26, transparent 70%)`
+                `radial-gradient(circle 90px at ${latestX}% ${latestY}%, ${color}26, transparent 70%)`,
             ),
           }}
         />
 
-        {/* Shimmer sweep effect */}
         <div className="absolute inset-0 opacity-0 group-hover:opacity-100 -translate-x-full group-hover:translate-x-full transition-all duration-1000 bg-gradient-to-r from-transparent via-white/[0.08] to-transparent skew-x-12 pointer-events-none" />
 
-        {/* Ikon Utama */}
         <div className="relative z-10 text-white/60 group-hover:text-white transition-all duration-300 group-hover:drop-shadow-[0_0_6px_rgba(255,255,255,0.5)]">
           <IconComponent size={22} />
         </div>
 
-        {/* Label Nama */}
         <span className="relative z-10 text-[10px] text-white/30 group-hover:text-white/80 font-medium tracking-wider transition-colors truncate w-full text-center">
           {name}
         </span>
 
-        {/* Dot Indikator Berwarna */}
         <div
           className="absolute top-2 right-2 w-1.5 h-1.5 rounded-full opacity-60 group-hover:opacity-100 transition-opacity"
           style={{
@@ -176,6 +181,35 @@ function TechIcon3D({
 export default function ExperienceSection() {
   const [activeTab, setActiveTab] = useState<"tools" | "experience">("tools");
   const [activeCert, setActiveCert] = useState<CertificateItem | null>(null);
+
+  const [repos, setRepos] = useState<GithubRepo[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+
+  useEffect(() => {
+    async function fetchRepos() {
+      try {
+        setLoading(true);
+        // Menggunakan API internal route Next.js
+        const res = await fetch("/api/repos");
+        if (!res.ok) throw new Error("Gagal mengambil repositori");
+
+        const data = await res.json();
+
+        if (Array.isArray(data) && data.length > 0) {
+          // Mengambil 3 atau 4 repo secara acak
+          const count = Math.random() < 0.5 ? 3 : 4;
+          const shuffled = [...data].sort(() => 0.5 - Math.random());
+          setRepos(shuffled.slice(0, Math.min(count, shuffled.length)));
+        }
+      } catch (err) {
+        console.error("Fetch API Error:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchRepos();
+  }, []);
 
   const workPhotos = [
     {
@@ -195,6 +229,13 @@ export default function ExperienceSection() {
     },
   ];
 
+  const gradients = [
+    "from-purple-900/40 via-violet-800/20 to-black",
+    "from-emerald-900/40 via-teal-800/20 to-black",
+    "from-blue-900/40 via-indigo-800/20 to-black",
+    "from-rose-900/40 via-pink-800/20 to-black",
+  ];
+
   return (
     <motion.section
       initial={{ opacity: 0, y: 20 }}
@@ -210,23 +251,18 @@ export default function ExperienceSection() {
         className="rounded-3xl bg-gradient-to-br from-[#15151f] to-[#0e0e15] border border-white/[0.07] p-1 mb-12 shadow-2xl overflow-hidden"
       >
         <div className="rounded-[22px] bg-[#0a0a0f] p-5 sm:p-8 flex flex-col md:flex-row gap-6 items-center md:items-center justify-between">
-          
-          {/* Container Kiri: Foto Profil Laki-Laki yang Disesuaikan Ukurannya + Nama & Deskripsi */}
           <div className="flex flex-col sm:flex-row items-center sm:items-center gap-5 flex-1 w-full text-center sm:text-left">
-            
-            {/* ✨ KOTAK FOTO PROFIL LAKI-LAKI DI SEBELAH KIRI (Ukuran Proporsional & Rapi) */}
             <div className="relative group shrink-0">
               <div className="absolute -inset-1 rounded-2xl bg-gradient-to-r from-violet-500 to-emerald-400 opacity-40 blur-md group-hover:opacity-80 transition duration-500" />
               <div className="relative w-28 h-28 sm:w-32 sm:h-32 rounded-2xl overflow-hidden border-2 border-white/10 bg-[#12121c] shadow-xl flex items-center justify-center">
                 <img
-                  src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=300&h=300&auto=format&fit=crop"
+                  src="https://media.licdn.com/dms/image/v2/D5603AQElMlzBsWT5ag/profile-displayphoto-scale_200_200/B56ZxCQ8h5GYAY-/0/1770638266986?e=2147483647&v=beta&t=BQ_GhUv_6ThpcW9wjuqcGkpr1F0NVkca0Dvhx_sqm0k"
                   alt="Profile Kasyaf"
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                 />
               </div>
             </div>
 
-            {/* Bagian Teks Identitas */}
             <div className="flex-1">
               <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3">
                 <h1 className="text-xl sm:text-2xl font-bold text-white">
@@ -247,25 +283,27 @@ export default function ExperienceSection() {
               </p>
               <div className="mt-4 flex flex-wrap justify-center sm:justify-start gap-2 text-xs text-white/50">
                 <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/[0.05] border border-white/5">
-                  <MapPin size={12} className="text-violet-400" /> Bandung, Indonesia
+                  <MapPin size={12} className="text-violet-400" /> Bandung,
+                  Indonesia
                 </span>
                 <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/[0.05] border border-white/5">
-                  <Mail size={12} className="text-violet-400" /> kasyaf@example.com
+                  <Mail size={12} className="text-violet-400" />{" "}
+                  kakangkasyaf@gmail.com
                 </span>
                 <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/[0.05] border border-white/5">
-                  <User size={12} className="text-violet-400" /> 20+ Projects Shipped
+                  <User size={12} className="text-violet-400" /> 4y0+ Projects
+                  Shipped
                 </span>
               </div>
             </div>
-
           </div>
-
         </div>
 
         {/* Work Photos Grid */}
         <div className="px-5 sm:px-8 pb-6 sm:pb-8 pt-2">
           <h3 className="text-white font-semibold text-sm flex items-center gap-2 mb-4">
-            <Sparkles size={16} className="text-violet-400" /> Behind the Code & Work Session
+            <Sparkles size={16} className="text-violet-400" /> Behind the Code &
+            Work Session
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
             {workPhotos.map((photo, index) => (
@@ -282,7 +320,9 @@ export default function ExperienceSection() {
                   className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent opacity-90 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity flex items-end p-4">
-                  <p className="text-xs text-white font-medium">{photo.caption}</p>
+                  <p className="text-xs text-white font-medium">
+                    {photo.caption}
+                  </p>
                 </div>
               </motion.div>
             ))}
@@ -347,43 +387,73 @@ export default function ExperienceSection() {
         })}
       </div>
 
-      {/* FEATURED PROJECTS */}
+      {/* FEATURED PROJECTS FROM GITHUB API (3 ATAU 4 RANDOM ITEM) */}
       <h3 className="text-white font-semibold text-base flex items-center gap-2 mb-4">
-        <Zap size={16} className="text-emerald-400" /> Featured Projects
+        <Zap size={16} className="text-emerald-400" /> Featured Repositories
       </h3>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-12">
-        {featuredProjects.map((p, index) => (
-          <motion.div
-            key={p.title}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, delay: index * 0.1 }}
-            className="rounded-2xl bg-[#10101b] border border-white/[0.06] overflow-hidden hover:border-white/10 transition-all group"
-          >
-            <div className={`h-28 bg-gradient-to-br ${p.gradient} relative`}>
-              <div className="absolute bottom-2 left-3 text-[10px] font-bold px-2 py-1 rounded-full bg-black/60 text-white border border-white/10">
-                LIVE • v1.0
-              </div>
-            </div>
-            <div className="p-5">
-              <h4 className="text-base font-semibold text-white truncate">
-                {p.title}
-              </h4>
-              <p className="text-sm text-white/40 mt-1 line-clamp-2">
-                {p.description}
-              </p>
-              <div className="mt-4 flex gap-4 text-xs font-medium">
-                <a
-                  href={p.liveUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-white flex items-center gap-1 hover:text-emerald-400 transition-colors"
+
+      {loading ? (
+        <div className="flex items-center justify-center py-12 gap-2 text-white/40">
+          <Loader2 size={18} className="animate-spin text-emerald-400" />
+          <span className="text-xs">Memuat data dari GitHub...</span>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-5 mb-12">
+          {repos.map((p, index) => (
+            <motion.div
+              key={p.id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: index * 0.1 }}
+              className="rounded-2xl bg-[#10101b] border border-white/[0.06] overflow-hidden hover:border-white/10 transition-all group flex flex-col justify-between"
+            >
+              <div>
+                <div
+                  className={`h-24 bg-gradient-to-br ${
+                    gradients[index % gradients.length]
+                  } relative p-3 flex justify-between items-start`}
                 >
-                  <ExternalLink size={12} />
-                  Demo
-                </a>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-black/60 text-emerald-400 border border-emerald-500/20">
+                    {p.language || "Project"}
+                  </span>
+
+                  <div className="flex items-center gap-2 text-[10px] text-white/60 bg-black/40 px-2 py-0.5 rounded-full border border-white/10">
+                    <span className="flex items-center gap-0.5">
+                      <Star size={10} className="text-yellow-400" />
+                      {p.stargazers_count}
+                    </span>
+                    <span className="flex items-center gap-0.5">
+                      <GitFork size={10} />
+                      {p.forks_count}
+                    </span>
+                  </div>
+                </div>
+                <div className="p-5">
+                  <h4
+                    className="text-base font-semibold text-white truncate"
+                    title={p.name}
+                  >
+                    {p.name}
+                  </h4>
+                  <p className="text-sm text-white/40 mt-1 line-clamp-2 min-h-[2.5rem]">
+                    {p.description || "Tidak ada deskripsi repositori."}
+                  </p>
+                </div>
+              </div>
+              <div className="px-5 pb-5 pt-0 flex gap-4 text-xs font-medium">
+                {p.homepage && (
+                  <a
+                    href={p.homepage}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-white flex items-center gap-1 hover:text-emerald-400 transition-colors"
+                  >
+                    <ExternalLink size={12} />
+                    Demo
+                  </a>
+                )}
                 <a
-                  href={p.githubUrl}
+                  href={p.html_url}
                   target="_blank"
                   rel="noreferrer"
                   className="text-white/40 flex items-center gap-1 hover:text-white transition-colors"
@@ -392,10 +462,10 @@ export default function ExperienceSection() {
                   Code
                 </a>
               </div>
-            </div>
-          </motion.div>
-        ))}
-      </div>
+            </motion.div>
+          ))}
+        </div>
+      )}
 
       {/* BOTTOM SECTION (CERTIFICATES & TOOLS / EXPERIENCE TABS) */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
@@ -426,7 +496,7 @@ export default function ExperienceSection() {
           </div>
         </div>
 
-        {/* Tools & Experience Tabs with Compact Grid */}
+        {/* Tools & Experience Tabs */}
         <div className="lg:col-span-3 rounded-2xl bg-[#10101b] border border-white/[0.06] p-6">
           <div className="flex gap-2 mb-5">
             <button
@@ -478,21 +548,29 @@ export default function ExperienceSection() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
                 transition={{ duration: 0.2 }}
-                className="space-y-3"
+                className="border-l border-white/10 pl-6 space-y-6 my-2"
               >
-                {experiences.map((e) => (
-                  <div
-                    key={e.period}
-                    className="p-4 rounded-xl bg-[#0a0a0f] border border-white/[0.05]"
-                  >
-                    <span className="text-xs font-mono text-emerald-400">
-                      {e.period}
-                    </span>
-                    <h4 className="text-sm font-semibold text-white mt-1">
+                {experiences.map((e, idx) => (
+                  <div key={idx} className="relative group">
+                    <span className="absolute -left-[31px] top-1.5 w-2.5 h-2.5 bg-emerald-400 rounded-full ring-4 ring-emerald-400/20 group-hover:scale-125 transition-transform" />
+
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-xs font-mono px-2 py-0.5 rounded-full bg-emerald-400/10 border border-emerald-400/20 text-emerald-400 font-medium">
+                        {e.period}
+                      </span>
+                    </div>
+
+                    <h4 className="text-sm font-semibold text-white leading-snug">
                       {e.role}
                     </h4>
-                    <p className="text-xs text-white/40 mt-1 leading-relaxed">
-                      {e.org} — {e.desc}
+
+                    <div className="flex items-center gap-1.5 text-xs text-violet-400 font-medium mt-0.5">
+                      <Briefcase size={12} />
+                      <span>{e.org}</span>
+                    </div>
+
+                    <p className="text-xs text-white/50 mt-2 leading-relaxed bg-[#0a0a0f] p-3 rounded-xl border border-white/[0.04]">
+                      {e.desc}
                     </p>
                   </div>
                 ))}

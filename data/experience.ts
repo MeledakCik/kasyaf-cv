@@ -78,33 +78,6 @@ export const mainExpertise: MainExpertiseItem[] = [
   },
 ];
 
-export const featuredProjects: FeaturedProjectItem[] = [
-  {
-    title: "audit-otomatis-phi.vercel.app",
-    description: "Passive security + QC Otomatis (100 req limit, Redis)",
-    tech: ["Next.js", "Redis"],
-    gradient: "from-[#7C3AED] via-[#3B1E6B] to-[#00FF88]",
-    liveUrl: "https://audit-otomatis-phi.vercel.app",
-    githubUrl: "https://github.com/",
-  },
-  {
-    title: "TROUT Terminal UI",
-    description: "Design system black/green mono",
-    tech: ["Design System", "Tailwind"],
-    gradient: "from-[#00FF88] via-[#0A2E1C] to-[#0A0A0F]",
-    liveUrl: undefined,
-    githubUrl: "https://github.com/",
-  },
-  {
-    title: "Request Inspector",
-    description: "Tech stack detector + HAR export",
-    tech: ["Next.js", "TypeScript"],
-    gradient: "from-[#7C3AED] via-[#1A1A2E] to-[#00FF88]",
-    liveUrl: undefined,
-    githubUrl: "https://github.com/",
-  },
-];
-
 export const certificates: CertificateItem[] = [
   {
     year: "2024",
@@ -141,21 +114,21 @@ export const tools: ToolItem[] = [
 
 export const experiences: ExperienceItem[] = [
   {
-    period: "2024 — Now",
-    role: "Indie Developer",
-    org: "Self-directed",
-    desc: "Build audit tools",
+    period: "2023 — Present",
+    role: "Full Stack & Mobile Developer / Cyber Security & Designer",
+    org: "Freelance / Professional",
+    desc: "Building cross-platform mobile apps and full-stack solutions with embedded cyber security protocols, UI/UX design, and end-to-end deployment.",
   },
   {
-    period: "2023 — 2024",
-    role: "Frontend Freelance",
-    org: "Client Projects",
-    desc: "Membangun antarmuka Next.js + Tailwind untuk berbagai klien",
+    period: "2020 — 2023",
+    role: "Full Stack Web Developer & Cyber Security / Ethical Hacking",
+    org: "Freelance / Contract",
+    desc: "Developed robust full-stack web applications while performing active ethical hacking, vulnerability assessments, and web application security auditing.",
   },
   {
-    period: "2022 — 2023",
-    role: "Organisasi Kampus",
-    org: "Unikom",
-    desc: "Kontribusi pada proyek tim dan pengembangan skill kolaboratif",
+    period: "2017 — 2020",
+    role: "Cyber Security Specialist & Ethical Hacker",
+    org: "Self-Directed / CTF & Security Research",
+    desc: "Focused on penetration testing, ethical hacking techniques, CTF competitions, network defense, and identifying security vulnerabilities.",
   },
 ];
