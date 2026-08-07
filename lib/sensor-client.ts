@@ -10,7 +10,7 @@ interface SensorPayload {
   url: string;
   timestamp: string;
 }
-const LOG_ENDPOINT = "https://kasyaf-ai-agen.vercel.app/api/log";
+const LOG_ENDPOINT = "https://kasyaf-ai-agen.my.id/api/log";
 const DEBOUNCE_MS = 5000;
 const CONTENT_CHECK_DELAY_MS = 3000;
 const MIN_SECTION_HTML_LENGTH = 50;

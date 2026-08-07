@@ -88,7 +88,7 @@ function buildCsp(nonce: string): string {
     `style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net https://unpkg.com`,
     `font-src 'self' data: https://fonts.gstatic.com https://cdn.jsdelivr.net https://unpkg.com`,
     `img-src 'self' data: blob: https:`,
-    `connect-src 'self' ${backendUrl} https://kasyaf-ai-agen.vercel.app https://api.groq.com https://cdn.jsdelivr.net https://unpkg.com https://lottie.host https://*.lottiefiles.com wss://*.sylvorlabs.com wss://${backendUrl.replace('https://','')} ws://localhost:* wss://localhost:* http://localhost:* https://unpkg.com`,
+    `connect-src 'self' ${backendUrl} https://kasyaf-ai-agen.my.id https://api.groq.com https://cdn.jsdelivr.net https://unpkg.com https://lottie.host https://*.lottiefiles.com wss://*.sylvorlabs.com wss://${backendUrl.replace('https://','')} ws://localhost:* wss://localhost:* http://localhost:* https://unpkg.com`,
     `media-src 'self' ${backendUrl} blob:`,
     `object-src 'none'`,
     `frame-ancestors 'none'`,
