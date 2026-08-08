@@ -1,3 +1,4 @@
+// app/api/repos/route.ts
 import { NextResponse } from 'next/server';
 
 const GITHUB_USERNAMES = ['MeledakCik', 'K4K4NG'];
@@ -11,36 +12,21 @@ interface GitHubRepo {
   language: string | null;
   topics?: string[];
   stargazers_count: number;
-  owner: {
-    login: string;
-  };
+  owner: { login: string };
 }
 
-// Fungsi pembersih README dari tag HTML, URL, & Markdown
-function summarizeReadme(readmeText: string, maxLength: number = 160): string {
+function summarizeReadme(readmeText: string, maxLength = 160): string {
   if (!readmeText) return '';
-
-  const cleanText = readmeText
-    // 1. Hapus tag HTML beserta isinya jika tag tersebut adalah script/style/svg
+  const clean = readmeText
     .replace(/<(script|style|svg)[^>]*>[\s\S]*?<\/\1>/gi, '')
-    // 2. Hapus semua tag HTML biasa (termasuk <p align="...">, <a href="...">, <img ...>)
     .replace(/<[^>]+>/g, ' ')
-    // 3. Hapus markdown image ![alt](url) dan link [text](url)
     .replace(/!\[.*?\]\(.*?\)/g, '')
     .replace(/\[(.*?)\]\(.*?\)/g, '$1')
-    // 4. Hapus URL mentah (https://... atau http://...)
     .replace(/https?:\/\/\S+/gi, '')
-    // 5. Hapus karakter sintaks Markdown (#, *, `, _, ~, >, -, dll)
     .replace(/[#*`_~>-]/g, ' ')
-    // 6. Rapikan spasi berlebih, tab, dan newlines
     .replace(/\s+/g, ' ')
     .trim();
-
-  if (!cleanText) return '';
-
-  return cleanText.length > maxLength
-    ? cleanText.substring(0, maxLength) + '...'
-    : cleanText;
+  return clean.length > maxLength ? clean.slice(0, maxLength) + '...' : clean;
 }
 
 export async function GET() {
@@ -48,78 +34,82 @@ export async function GET() {
     const headers: HeadersInit = {
       Accept: 'application/vnd.github.v3+json',
     };
-
     if (process.env.GITHUB_TOKEN) {
       headers.Authorization = `Bearer ${process.env.GITHUB_TOKEN}`;
     }
 
-    const repoPromises = GITHUB_USERNAMES.map(async (username) => {
-      const res = await fetch(
-        `https://api.github.com/users/${username}/repos?sort=updated&per_page=15&type=all`,
-        {
-          headers,
-          next: { revalidate: 3600 },
-        }
-      );
+    const results = await Promise.all(
+      GITHUB_USERNAMES.map(async (username) => {
+        try {
+          const res = await fetch(
+            `https://api.github.com/users/${username}/repos?sort=updated&per_page=15&type=all`,
+            { headers, next: { revalidate: 3600 } }
+          );
+          if (!res.ok) {
+            console.error(`GitHub API error for ${username}: ${res.status}`);
+            return [];
+          }
+          const repos = (await res.json()) as GitHubRepo[];
+          if (!Array.isArray(repos)) return [];
 
-      if (!res.ok) return [];
+          const processed = await Promise.all(
+            repos.map(async (repo) => {
+              if (repo.fork) return null;
+              let description = '';
 
-      const repos = (await res.json()) as GitHubRepo[];
-      if (!Array.isArray(repos)) return [];
-
-      const reposWithReadme = await Promise.all(
-        repos.map(async (repo) => {
-          if (repo.fork) return null;
-
-          let finalDescription = '';
-
-          // 1. Coba ambil dari RAW README
-          try {
-            const readmeRes = await fetch(
-              `https://api.github.com/repos/${repo.owner.login}/${repo.name}/readme`,
-              {
-                headers: {
-                  ...headers,
-                  Accept: 'application/vnd.github.raw+json',
-                },
-                next: { revalidate: 3600 },
+              // Try README
+              try {
+                const readmeRes = await fetch(
+                  `https://api.github.com/repos/${repo.owner.login}/${repo.name}/readme`,
+                  {
+                    headers: {
+                      ...headers,
+                      Accept: 'application/vnd.github.raw+json',
+                    },
+                    next: { revalidate: 3600 },
+                  }
+                );
+                if (readmeRes.ok) {
+                  const raw = await readmeRes.text();
+                  description = summarizeReadme(raw);
+                }
+              } catch (e) {
+                console.warn(`README fetch failed for ${repo.name}:`, e);
               }
-            );
 
-            if (readmeRes.ok) {
-              const rawReadme = await readmeRes.text();
-              finalDescription = summarizeReadme(rawReadme);
-            }
-          } catch {
-            // Abaikan jika tidak ada README
-          }
+              if (!description && repo.description) {
+                description = summarizeReadme(repo.description);
+              }
 
-          // 2. Jika README kosong/gagal, pakai description dari repo
-          if (!finalDescription && repo.description) {
-            finalDescription = summarizeReadme(repo.description);
-          }
+              return {
+                id: repo.id,
+                name: repo.name,
+                description: description || 'Tidak ada deskripsi atau README.',
+                html_url: repo.html_url,
+                language: repo.language,
+                topics: repo.topics || [],
+                owner: repo.owner.login,
+                stargazers_count: repo.stargazers_count,
+              };
+            })
+          );
 
-          return {
-            id: repo.id,
-            name: repo.name,
-            description: finalDescription || 'Tidak ada deskripsi atau README.',
-            html_url: repo.html_url,
-            language: repo.language,
-            topics: repo.topics || [],
-            owner: repo.owner.login,
-            stargazers_count: repo.stargazers_count,
-          };
-        })
-      );
+          return processed.filter(Boolean);
+        } catch (err) {
+          console.error(`Error fetching ${username}:`, err);
+          return [];
+        }
+      })
+    );
 
-      return reposWithReadme.filter(Boolean);
-    });
-
-    const results = await Promise.all(repoPromises);
-    const combinedRepos = results.flat();
-
-    return NextResponse.json(combinedRepos);
-  } catch {
-    return NextResponse.json({ error: 'Failed to fetch repositories' }, { status: 500 });
+    const combined = results.flat();
+    console.log(`✅ Returning ${combined.length} repos`);
+    return NextResponse.json(combined);
+  } catch (error) {
+    console.error('Fatal error:', error);
+    return NextResponse.json(
+      { error: 'Failed to fetch repositories' },
+      { status: 500 }
+    );
   }
 }
