@@ -31,7 +31,8 @@ export default function Projects() {
         if (Array.isArray(data)) {
           setProjects(data);
         }
-      } catch (err: any) {
+      } catch {
+        // ✅ Parameter error dihapus karena tidak digunakan
         setError("Gagal memuat repository GitHub.");
       } finally {
         setLoading(false);
@@ -70,7 +71,6 @@ export default function Projects() {
           {error}
         </div>
       ) : (
-        /* Grid Layout: 1 kolom di HP, 2 kolom di Tablet (md), 3 kolom di Desktop lebar (lg) */
         <div className="mt-8 sm:mt-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           {projects.map((p, i) => (
             <Reveal key={p.id} delay={i * 0.05}>
@@ -82,7 +82,6 @@ export default function Projects() {
                 whileHover={{ y: -4 }}
               >
                 <div>
-                  {/* Header Card: Stack vertikal di layar super kecil (xs), flex horizontal di sm ke atas */}
                   <div className="flex flex-col xs:flex-row xs:items-start justify-between gap-2 xs:gap-4">
                     <div className="min-w-0 flex-1">
                       <span className="text-[10px] text-[#39e6b5] block uppercase font-mono mb-0.5 sm:mb-1">
@@ -105,7 +104,6 @@ export default function Projects() {
                     </span>
                   </div>
 
-                  {/* Deskripsi: Mencegah overflow teks dan mempertahankan line spacing */}
                   <p
                     className="mt-2.5 sm:mt-3 text-[#7c8aac] text-xs sm:text-sm leading-relaxed break-words [overflow-wrap:anywhere] line-clamp-3"
                     style={{ fontFamily: "'Poppins', sans-serif" }}
@@ -114,7 +112,6 @@ export default function Projects() {
                   </p>
                 </div>
 
-                {/* Badges Topics/Tags */}
                 {p.topics && p.topics.length > 0 && (
                   <ul className="mt-4 sm:mt-5 flex flex-wrap gap-1.5 sm:gap-2 pt-2 sm:pt-3 border-t border-[#1f2c45]/50">
                     {p.topics.slice(0, 4).map((topic, idx) => (

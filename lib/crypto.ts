@@ -3,7 +3,7 @@ const IV_LENGTH = 12;
 
 // Helper base64 yang jalan di browser & Node
 function toBase64(bytes: Uint8Array): string {
-  if (typeof Buffer!== 'undefined') {
+  if (typeof Buffer !== 'undefined') {
     return Buffer.from(bytes).toString('base64');
   }
   let binary = '';
@@ -11,7 +11,7 @@ function toBase64(bytes: Uint8Array): string {
   return btoa(binary);
 }
 function fromBase64(b64: string): Uint8Array {
-  if (typeof Buffer!== 'undefined') {
+  if (typeof Buffer !== 'undefined') {
     return new Uint8Array(Buffer.from(b64, 'base64'));
   }
   const binary = atob(b64);
@@ -22,7 +22,6 @@ function fromBase64(b64: string): Uint8Array {
 
 async function deriveKey(keyString: string): Promise<CryptoKey> {
   if (!keyString) throw new Error("ENCRYPTION_KEY kosong");
-  // Hash key string jadi 32 byte fix buat AES-256, jadi gak bisa ditebak panjangnya
   const keyBytes = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(keyString));
   return crypto.subtle.importKey('raw', keyBytes, 'AES-GCM', false, ['encrypt', 'decrypt']);
 }
@@ -31,8 +30,8 @@ async function deriveKey(keyString: string): Promise<CryptoKey> {
  * ENCRYPT - Dipake di CLIENT (browser)
  * Otomatis nambah _ts & _nonce biar anti-replay Postman
  */
-export async function encryptPayload(
-  payload: object,
+export async function encryptPayload<T extends object>(
+  payload: T,
   keyString: string,
 ): Promise<string> {
   if (!keyString) throw new Error("Kunci enkripsi client tidak valid");
@@ -42,7 +41,7 @@ export async function encryptPayload(
 
   // AUTO INJECT ANTI-REPLAY - ini yang bikin Postman mati
   const payloadWithMeta = {
-   ...(payload as any),
+    ...payload,                // ✅ tanpa casting any
     _ts: Date.now(),
     _nonce: crypto.randomUUID(),
   };

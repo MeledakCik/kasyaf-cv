@@ -12,16 +12,16 @@ const poppins = Poppins({
 
 export default function CikawanShield() {
   const [status, setStatus] = useState<"solving" | "verifying" | "failed">(
-    "solving",
+    "solving"
   );
   const [progress, setProgress] = useState(0);
 
-  const runVerification = useCallback(async () => {
-    setStatus("solving");
-    setProgress(0);
+  // Helper untuk melakukan proses verifikasi di-wrap useCallback
+  const executeVerification = useCallback(async () => {
+    let progressInterval: NodeJS.Timeout | null = null;
 
     try {
-      const progressInterval = setInterval(() => {
+      progressInterval = setInterval(() => {
         setProgress((p) => Math.min(p + 5, 90));
       }, 200);
 
@@ -29,14 +29,10 @@ export default function CikawanShield() {
       if (!challengeRes.ok) throw new Error("challenge fetch failed");
       const { challenge, seed, difficulty } = await challengeRes.json();
 
-      setProgress(50);
       const { nonce, solveTimeMs } = await solveChallenge(seed, difficulty);
-
-      setProgress(75);
       const automationFlags = collectAutomationFlags();
 
       setStatus("verifying");
-      setProgress(90);
 
       const res = await fetch("/api/session", {
         method: "POST",
@@ -50,7 +46,7 @@ export default function CikawanShield() {
         }),
       });
 
-      clearInterval(progressInterval);
+      if (progressInterval) clearInterval(progressInterval);
       setProgress(100);
 
       if (res.ok) {
@@ -60,12 +56,31 @@ export default function CikawanShield() {
       }
     } catch {
       setStatus("failed");
+    } finally {
+      if (progressInterval) clearInterval(progressInterval);
     }
   }, []);
 
+  // Jalankan verifikasi secara asinkron setelah render selesai
   useEffect(() => {
-    runVerification();
-  }, [runVerification]);
+    let isMounted = true;
+
+    queueMicrotask(() => {
+      if (isMounted) {
+        executeVerification();
+      }
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [executeVerification]);
+
+  const handleRetry = () => {
+    setStatus("solving");
+    setProgress(0);
+    executeVerification();
+  };
 
   return (
     <div
@@ -154,7 +169,7 @@ export default function CikawanShield() {
               </div>
 
               <button
-                onClick={runVerification}
+                onClick={handleRetry}
                 className="mt-5 w-full rounded-xl bg-slate-900 text-white font-medium py-2.5 text-sm hover:bg-slate-800 transition-colors"
               >
                 Coba lagi

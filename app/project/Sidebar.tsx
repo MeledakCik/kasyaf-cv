@@ -6,7 +6,8 @@ import { useState, useEffect } from "react";
 import { 
   Menu, X, Layers, 
   Search, Calendar, Clock, FileText,
-  ArrowLeft
+  ArrowLeft,
+  type LucideIcon
 } from "lucide-react";
 
 interface MenuItem {
@@ -14,7 +15,7 @@ interface MenuItem {
   status: "done" | "planned" | "wip";
 }
 
-const iconMap: Record<string, any> = {
+const iconMap: Record<string, LucideIcon> = {
   deteksi: Search,
   rencana: Calendar,
   pengerjaan: Clock,

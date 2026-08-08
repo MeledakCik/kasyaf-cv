@@ -9,7 +9,6 @@ import {
   ArrowRight, 
   MapPin, 
   Clock, 
-  FileText,
   Sparkles
 } from 'lucide-react';
 import Reveal from '../animations/Reveal';

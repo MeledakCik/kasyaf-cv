@@ -1,13 +1,20 @@
 "use client";
+
 import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
 import BackgroundCanvasTemplate from "@/components/Templates/BackgroundCanvas";
-export function TiltCard({
-  card,
-  onClick,
-}: {
-  card: any;
+
+interface Card {
+  id: string;
+  title: string;
+  content: string;
+}
+
+interface TiltCardProps {
+  card: Card;
   onClick: () => void;
-}) {
+}
+
+function TiltCard({ card, onClick }: TiltCardProps) {
   const x = useMotionValue(0);
   const y = useMotionValue(0);
   const mouseXSpring = useSpring(x);
@@ -15,6 +22,7 @@ export function TiltCard({
   const rotateX = useTransform(mouseYSpring, [-0.5, 0.5], ["15deg", "-15deg"]);
   const rotateY = useTransform(mouseXSpring, [-0.5, 0.5], ["-15deg", "15deg"]);
   const opacity = useTransform(mouseYSpring, [-0.5, 0.5], [0.8, 0.95]);
+
   const handleMouseMove = (e: React.MouseEvent) => {
     const rect = e.currentTarget.getBoundingClientRect();
     const width = rect.width;
@@ -26,10 +34,12 @@ export function TiltCard({
     x.set(xPct);
     y.set(yPct);
   };
+
   const handleMouseLeave = () => {
     x.set(0);
     y.set(0);
   };
+
   return (
     <motion.div
       layoutId={`card-${card.id}`}
@@ -56,14 +66,16 @@ export function TiltCard({
     </motion.div>
   );
 }
+
 export default function Template() {
-  const CARDS = [
+  const CARDS: Card[] = [
     {
       id: "3d",
       title: "3D Model",
       content: "Tampilan 3D dengan interaksi mouse.",
     },
   ];
+
   return (
     <main className="relative min-h-screen w-full bg-[#020617] flex items-center justify-center overflow-hidden">
       <div className="absolute inset-0 z-0">

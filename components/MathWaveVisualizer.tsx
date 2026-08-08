@@ -68,7 +68,8 @@ export default function MathWaveVisualizer() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
 
-  const [playlist, setPlaylist] = useState<string[]>([]);
+  // ✅ setPlaylist dihapus karena tidak digunakan
+  const [playlist] = useState<string[]>([]);
   const [currentTrackIndex, setCurrentTrackIndex] = useState<number>(0);
   const [isShuffling, setIsShuffling] = useState<boolean>(false);
 
@@ -255,7 +256,10 @@ export default function MathWaveVisualizer() {
     vs.phaseLerp = 0;
   }, []);
 
-  updateFormulaRef.current = updateFormula;
+  // ✅ Pindahkan ke useEffect
+  useEffect(() => {
+    updateFormulaRef.current = updateFormula;
+  }, [updateFormula]);
 
   const updateBpm = useCallback((now: number, energy: number) => {
     const vs = visualStateRef.current;
@@ -399,7 +403,11 @@ export default function MathWaveVisualizer() {
     (ctx: CanvasRenderingContext2D, points: { x: number; y: number }[]) => {
       if (points.length < 3) {
         points.forEach((p, i) => {
-          i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y);
+          if (i === 0) {
+            ctx.moveTo(p.x, p.y);
+          } else {
+            ctx.lineTo(p.x, p.y);
+          }
         });
         return;
       }
@@ -568,6 +576,7 @@ export default function MathWaveVisualizer() {
     }
   }, []);
 
+  // ✅ loop menggunakan loopRef untuk rekursi yang aman
   const loop = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -586,7 +595,7 @@ export default function MathWaveVisualizer() {
       drawMathParticles(now, 0);
       drawAxis();
       vs.lastFrameTime = now;
-      loopIdRef.current = requestAnimationFrame(loop);
+      loopIdRef.current = requestAnimationFrame(loopRef.current!);
       return;
     }
 
@@ -674,7 +683,7 @@ export default function MathWaveVisualizer() {
       ctx.fillText("⏸ JEDA", vs.cx, 30);
     }
 
-    loopIdRef.current = requestAnimationFrame(loop);
+    loopIdRef.current = requestAnimationFrame(loopRef.current!);
   }, [
     drawGalaxy,
     drawMathParticles,
@@ -686,7 +695,11 @@ export default function MathWaveVisualizer() {
     updateFormula,
   ]);
 
-  loopRef.current = loop;
+  // ✅ Pindahkan ke useEffect
+  useEffect(() => {
+    loopRef.current = loop;
+  }, [loop]);
+
   const startVisualization = useCallback(
     async (source?: string) => {
       const audio = audioRef.current;
@@ -821,9 +834,15 @@ export default function MathWaveVisualizer() {
         }
 
         if (!audioCtxRef.current) {
-          audioCtxRef.current = new (
-            window.AudioContext || (window as any).webkitAudioContext
-          )();
+          // ✅ Perbaikan: menggunakan type assertion yang aman
+          const AudioContextConstructor =
+            window.AudioContext ||
+            (window as Window & { webkitAudioContext?: typeof AudioContext })
+              .webkitAudioContext;
+          if (!AudioContextConstructor) {
+            throw new Error("Web Audio API tidak didukung");
+          }
+          audioCtxRef.current = new AudioContextConstructor();
         }
         const audioCtx = audioCtxRef.current;
         await audioCtx.resume();
@@ -871,7 +890,8 @@ export default function MathWaveVisualizer() {
         }
 
         if (loopIdRef.current) cancelAnimationFrame(loopIdRef.current);
-        loop();
+        // Gunakan loopRef yang sudah di-update
+        loopRef.current?.();
       } catch (error) {
         console.error("❌ Error starting visualization:", error);
         const errorMsg = (error as Error).message;
@@ -883,10 +903,13 @@ export default function MathWaveVisualizer() {
         document.getElementById("topRight")?.classList.remove("show");
       }
     },
-    [sourceMode, updateFormula, loop],
+    [sourceMode, updateFormula],
   );
 
-  startVisualizationRef.current = startVisualization;
+  // ✅ Pindahkan ke useEffect
+  useEffect(() => {
+    startVisualizationRef.current = startVisualization;
+  }, [startVisualization]);
 
   const handleConvert = useCallback(async () => {
     const url = socialUrlInputRef.current?.value.trim();
@@ -937,6 +960,7 @@ export default function MathWaveVisualizer() {
       setIsConverting(false);
     }
   }, []);
+
   const handleUpload = useCallback(() => {
     if (sourceMode === "file") {
       if (!fileInputRef.current?.files?.[0]) {

@@ -2,6 +2,20 @@ import { NextResponse } from 'next/server';
 
 const GITHUB_USERNAMES = ['MeledakCik', 'K4K4NG'];
 
+interface GitHubRepo {
+  id: number;
+  name: string;
+  fork: boolean;
+  description: string | null;
+  html_url: string;
+  language: string | null;
+  topics?: string[];
+  stargazers_count: number;
+  owner: {
+    login: string;
+  };
+}
+
 // Fungsi pembersih README dari tag HTML, URL, & Markdown
 function summarizeReadme(readmeText: string, maxLength: number = 160): string {
   if (!readmeText) return '';
@@ -50,11 +64,11 @@ export async function GET() {
 
       if (!res.ok) return [];
 
-      const repos = await res.json();
+      const repos = (await res.json()) as GitHubRepo[];
       if (!Array.isArray(repos)) return [];
 
       const reposWithReadme = await Promise.all(
-        repos.map(async (repo: any) => {
+        repos.map(async (repo) => {
           if (repo.fork) return null;
 
           let finalDescription = '';
@@ -76,7 +90,7 @@ export async function GET() {
               const rawReadme = await readmeRes.text();
               finalDescription = summarizeReadme(rawReadme);
             }
-          } catch (e) {
+          } catch {
             // Abaikan jika tidak ada README
           }
 
@@ -105,7 +119,7 @@ export async function GET() {
     const combinedRepos = results.flat();
 
     return NextResponse.json(combinedRepos);
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: 'Failed to fetch repositories' }, { status: 500 });
   }
 }

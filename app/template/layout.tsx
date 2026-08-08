@@ -146,8 +146,8 @@ function SidebarNav({
     <nav className="space-y-2 overflow-y-auto">
       <NavItem
         label="Dashboard"
-        path="/home"
-        active={pathname === "/home"}
+        path="/template"
+        active={pathname === "/template"}
         onNavigate={onNavigate}
       />
 

@@ -32,7 +32,6 @@ export async function GET(req: NextRequest) {
 
     const userAgent = req.headers.get('user-agent')?.toLowerCase() || '';
     const secFetchMode = req.headers.get('sec-fetch-mode');
-    const secFetchSite = req.headers.get('sec-fetch-site');
     const accept = req.headers.get('accept') || '';
 
     // === FIX 1: WHITELIST BOT - JANGAN DI-BLOCK ===

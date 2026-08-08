@@ -99,7 +99,7 @@ export default function Navbar() {
             <div className="md:hidden fixed top-14 sm:top-16 left-0 h-[calc(100vh-3.5rem)] sm:h-[calc(100vh-4rem)] w-[75%] max-w-[320px] bg-[#05070d] border-r border-[#1f2c45]/20 z-40 animate-in slide-in-from-left duration-300">
               <div className="flex flex-col h-full px-6 py-8">
                 <div className="flex flex-col gap-2">
-                  {navItems.map((item, index) => (
+                  {navItems.map((item) => (
                     <Link
                       key={item.label}
                       href={item.href}

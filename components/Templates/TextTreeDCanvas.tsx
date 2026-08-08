@@ -1,15 +1,19 @@
 "use client";
 
 import { useFrame, Canvas } from "@react-three/fiber";
-import {
-  Environment,
-  OrbitControls,
-} from "@react-three/drei";
+import { Environment, OrbitControls } from "@react-three/drei";
 import { EffectComposer, Bloom } from "@react-three/postprocessing";
 import { Text3D, Center } from "@react-three/drei";
 import { useMemo, useRef } from "react";
 import * as THREE from "three";
 
+// ---------- Fungsi seeded random (deterministik) ----------
+function seededRandom(seed: number): number {
+  const x = Math.sin(seed) * 10000;
+  return x - Math.floor(x);
+}
+
+// ---------- Komponen Teks 3D ----------
 function TextOrb({
   text,
   color,
@@ -26,18 +30,18 @@ function TextOrb({
         <Text3D
           font="/fonts/Poppins_ExtraBold.json"
           size={1.5}
-          height={0.5} 
-          bevelEnabled={true} 
+          height={0.5}
+          bevelEnabled={true}
           bevelSize={0.03}
-          bevelThickness={0.04} 
+          bevelThickness={0.04}
           curveSegments={32}
         >
           {text}
           <meshPhysicalMaterial
             color={color}
             emissive={color}
-            emissiveIntensity={0.2} 
-            roughness={0.2} 
+            emissiveIntensity={0.2}
+            roughness={0.2}
             metalness={0.1}
             toneMapped={false}
           />
@@ -48,43 +52,57 @@ function TextOrb({
   );
 }
 
+// ---------- Konfigurasi bintang warp ----------
 const STAR_COUNT = 6000;
 const WARP_SPEED = 6;
 const FAR_Z = -300;
 const NEAR_Z = 40;
 
+// ---------- Komponen bintang (dengan perbaikan) ----------
 function WarpStars() {
   const linesRef = useRef<THREE.LineSegments>(null!);
 
-  const { positions, colors, stars } = useMemo(() => {
-    const positions = new Float32Array(STAR_COUNT * 2 * 3);
-    const colors = new Float32Array(STAR_COUNT * 2 * 3);
-    const stars = Array.from({ length: STAR_COUNT }).map(() => ({
-      ang: Math.random() * Math.PI * 2,
-      r: 0.3 + Math.random() * 1.0,
-      z: FAR_Z + Math.random() * (NEAR_Z - FAR_Z),
-      prevX: 0,
-      prevY: 0,
-      prevZ: 0,
-      first: true,
-    }));
+  // 1. Buat array posisi dan warna (hanya sekali, pure)
+  const { positions, colors } = useMemo(() => {
+    const pos = new Float32Array(STAR_COUNT * 2 * 3);
+    const col = new Float32Array(STAR_COUNT * 2 * 3);
     for (let i = 0; i < STAR_COUNT; i++) {
       const idx = i * 6;
-      colors[idx] = 0.15;
-      colors[idx + 1] = 0.15;
-      colors[idx + 2] = 0.18;
-      colors[idx + 3] = 1.0;
-      colors[idx + 4] = 1.0;
-      colors[idx + 5] = 1.0;
+      // warna: gradasi biru ke putih (bisa disesuaikan)
+      col[idx] = 0.15;
+      col[idx + 1] = 0.15;
+      col[idx + 2] = 0.18;
+      col[idx + 3] = 1.0;
+      col[idx + 4] = 1.0;
+      col[idx + 5] = 1.0;
     }
-    return { positions, colors, stars };
+    return { positions: pos, colors: col };
   }, []);
 
+  // 2. Data bintang disimpan di ref (boleh dimutasi di useFrame)
+  const starsRef = useRef(
+    Array.from({ length: STAR_COUNT }).map((_, i) => {
+      const seed = i * 1000 + 12345;
+      return {
+        ang: seededRandom(seed) * Math.PI * 2,
+        r: 0.3 + seededRandom(seed + 1) * 1.0,
+        z: FAR_Z + seededRandom(seed + 2) * (NEAR_Z - FAR_Z),
+        prevX: 0,
+        prevY: 0,
+        prevZ: 0,
+        first: true,
+      };
+    })
+  );
+
+  // 3. Animasi di setiap frame
   useFrame((_, rawDelta) => {
     const dt = Math.min(rawDelta, 0.05);
     const posAttr = linesRef.current.geometry.attributes
       .position as THREE.BufferAttribute;
     const arr = posAttr.array as Float32Array;
+
+    const stars = starsRef.current;
 
     for (let i = 0; i < STAR_COUNT; i++) {
       const s = stars[i];
@@ -139,6 +157,7 @@ function WarpStars() {
   );
 }
 
+// ---------- Canvas utama ----------
 export default function BackgroundCanvas() {
   return (
     <div className="absolute inset-0 -z-10 bg-[#020617]">
@@ -148,11 +167,7 @@ export default function BackgroundCanvas() {
         <ambientLight intensity={0.25} color="#223344" />
         <Environment preset="night" />
         <group position={[0, 0, 0]}>
-          <TextOrb
-            text="M"
-            color="#ffffff"
-            basePosition={[-6, 0, 0]}
-          />
+          <TextOrb text="M" color="#ffffff" basePosition={[-6, 0, 0]} />
           <TextOrb text="KASYAF" color="#ffffff" basePosition={[0, 0, 0]} />
           <TextOrb text="A" color="#ffffff" basePosition={[6, 0, 0]} />
         </group>

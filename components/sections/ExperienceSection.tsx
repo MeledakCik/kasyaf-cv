@@ -1,6 +1,7 @@
+// components/sections/ExperienceSection.tsx - FULL FIXED VERSION
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import {
   motion,
   AnimatePresence,
@@ -27,6 +28,7 @@ import {
 } from "lucide-react";
 import { SiGithub } from "react-icons/si";
 import { Poppins } from "next/font/google";
+import Image from "next/image";
 import {
   mainExpertise,
   certificates,
@@ -40,11 +42,17 @@ const poppins = Poppins({
   weight: ["400", "500", "600", "700"],
 });
 
-const icons: Record<string, any> = { shield: Shield, code: Code, bot: Bot };
+type LucideIcon = React.ComponentType<{ size?: number; className?: string }>;
+
+const icons: Record<string, LucideIcon> = {
+  shield: Shield,
+  code: Code,
+  bot: Bot,
+};
 
 interface TechIcon3DProps {
   name: string;
-  icon: any;
+  icon: LucideIcon;
   color?: string;
   index?: number;
 }
@@ -59,6 +67,11 @@ interface GithubRepo {
   forks_count: number;
   language: string | null;
 }
+
+const seededRandom = (seed: number): number => {
+  const x = Math.sin(seed) * 10000;
+  return x - Math.floor(x);
+};
 
 function TechIcon3D({
   name,
@@ -78,6 +91,10 @@ function TechIcon3D({
 
   const spotlightX = useMotionValue(50);
   const spotlightY = useMotionValue(50);
+
+  const duration = useMemo(() => {
+    return 3 + seededRandom(index * 7.3 + 42.1) * 2;
+  }, [index]);
 
   const handleMouseMove = (e: React.MouseEvent) => {
     if (!ref.current) return;
@@ -113,7 +130,7 @@ function TechIcon3D({
         opacity: { delay: index * 0.04, duration: 0.3 },
         y: {
           delay: index * 0.04,
-          duration: 3 + Math.random() * 2,
+          duration: duration,
           repeat: Infinity,
           ease: "easeInOut",
         },
@@ -189,14 +206,12 @@ export default function ExperienceSection() {
     async function fetchRepos() {
       try {
         setLoading(true);
-        // Menggunakan API internal route Next.js
         const res = await fetch("/api/repos");
         if (!res.ok) throw new Error("Gagal mengambil repositori");
 
         const data = await res.json();
 
         if (Array.isArray(data) && data.length > 0) {
-          // Mengambil 3 atau 4 repo secara acak
           const count = Math.random() < 0.5 ? 3 : 4;
           const shuffled = [...data].sort(() => 0.5 - Math.random());
           setRepos(shuffled.slice(0, Math.min(count, shuffled.length)));
@@ -255,10 +270,13 @@ export default function ExperienceSection() {
             <div className="relative group shrink-0">
               <div className="absolute -inset-1 rounded-2xl bg-gradient-to-r from-violet-500 to-emerald-400 opacity-40 blur-md group-hover:opacity-80 transition duration-500" />
               <div className="relative w-28 h-28 sm:w-32 sm:h-32 rounded-2xl overflow-hidden border-2 border-white/10 bg-[#12121c] shadow-xl flex items-center justify-center">
-                <img
+                {/* ✅ Gambar LinkedIn - sudah dikonfigurasi di next.config.ts */}
+                <Image
                   src="https://media.licdn.com/dms/image/v2/D5603AQElMlzBsWT5ag/profile-displayphoto-scale_200_200/B56ZxCQ8h5GYAY-/0/1770638266986?e=2147483647&v=beta&t=BQ_GhUv_6ThpcW9wjuqcGkpr1F0NVkca0Dvhx_sqm0k"
                   alt="Profile Kasyaf"
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  fill
+                  className="object-cover group-hover:scale-105 transition-transform duration-500"
+                  sizes="(max-width: 640px) 112px, 128px"
                 />
               </div>
             </div>
@@ -314,10 +332,13 @@ export default function ExperienceSection() {
                 transition={{ duration: 0.3, delay: 0.2 + index * 0.1 }}
                 className="relative group rounded-2xl overflow-hidden border border-white/15 aspect-[16/10] bg-[#12121c]"
               >
-                <img
+                {/* ✅ Gambar Unsplash - sudah dikonfigurasi di next.config.ts */}
+                <Image
                   src={photo.url}
                   alt={photo.caption}
-                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                  fill
+                  className="object-cover transition-transform duration-500 group-hover:scale-105"
+                  sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, 33vw"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent opacity-90 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity flex items-end p-4">
                   <p className="text-xs text-white font-medium">
@@ -387,7 +408,7 @@ export default function ExperienceSection() {
         })}
       </div>
 
-      {/* FEATURED PROJECTS FROM GITHUB API (3 ATAU 4 RANDOM ITEM) */}
+      {/* FEATURED PROJECTS FROM GITHUB API */}
       <h3 className="text-white font-semibold text-base flex items-center gap-2 mb-4">
         <Zap size={16} className="text-emerald-400" /> Featured Repositories
       </h3>
@@ -608,12 +629,19 @@ export default function ExperienceSection() {
                   <X size={14} />
                 </button>
               </div>
-              <div className="bg-black rounded-xl min-h-[220px] flex items-center justify-center overflow-hidden border border-white/5 p-2">
+              <div className="bg-black rounded-xl min-h-[220px] flex items-center justify-center overflow-hidden border border-white/5 p-2 relative">
                 {activeCert.image ? (
-                  <img
+                  // ✅ Gambar sertifikat - gunakan unoptimized jika domain tidak dikenal
+                  <Image
                     src={activeCert.image}
                     alt={activeCert.title}
+                    width={500}
+                    height={300}
                     className="max-h-[300px] w-full object-contain rounded"
+                    unoptimized={
+                      !activeCert.image.includes("linkedin") &&
+                      !activeCert.image.includes("unsplash")
+                    }
                   />
                 ) : (
                   <span className="text-white/20 text-xs">

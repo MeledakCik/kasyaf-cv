@@ -2,7 +2,21 @@ import { useMotionValue, useSpring, useTransform } from "framer-motion";
 import { motion } from "framer-motion";
 import Image from "next/image";
 
-export function TiltCard({ card, onClick }: { card: any, onClick?: () => void }) {
+// Definisikan tipe untuk card
+interface Card {
+  id: string | number;
+  image: string;
+  title: string;
+  category: string;
+}
+
+export function TiltCard({
+  card,
+  onClick,
+}: {
+  card: Card;
+  onClick?: () => void;
+}) {
   const x = useMotionValue(0);
   const y = useMotionValue(0);
   const mouseXSpring = useSpring(x);
@@ -10,6 +24,7 @@ export function TiltCard({ card, onClick }: { card: any, onClick?: () => void })
   const rotateX = useTransform(mouseYSpring, [-0.5, 0.5], ["15deg", "-15deg"]);
   const rotateY = useTransform(mouseXSpring, [-0.5, 0.5], ["-15deg", "15deg"]);
   const opacity = useTransform(mouseYSpring, [-0.5, 0.5], [0.8, 0.95]);
+
   const handleMouseMove = (e: React.MouseEvent) => {
     const rect = e.currentTarget.getBoundingClientRect();
     const width = rect.width;
@@ -21,10 +36,12 @@ export function TiltCard({ card, onClick }: { card: any, onClick?: () => void })
     x.set(xPct);
     y.set(yPct);
   };
+
   const handleMouseLeave = () => {
     x.set(0);
     y.set(0);
   };
+
   return (
     <motion.div
       layoutId={`card-${card.id}`}
@@ -42,7 +59,7 @@ export function TiltCard({ card, onClick }: { card: any, onClick?: () => void })
     >
       <div className="h-48 w-full relative overflow-hidden rounded-t-3xl">
         <Image
-          src={card.image} 
+          src={card.image}
           alt={card.title}
           fill
           priority

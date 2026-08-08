@@ -2,11 +2,18 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 
+interface Particle {
+  id: number;
+  x: number;
+  y: number;
+}
+
 export const SandEmitter = ({ children }: { children: React.ReactNode }) => {
-  const [particles, setParticles] = useState<any[]>([]);
+  const [particles, setParticles] = useState<Particle[]>([]);
+
   const spawnSand = (e: React.MouseEvent) => {
     const rect = e.currentTarget.getBoundingClientRect();
-    const newParticle = {
+    const newParticle: Particle = {
       id: Date.now(),
       x: e.clientX - rect.left,
       y: e.clientY - rect.top,

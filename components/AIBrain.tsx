@@ -2,7 +2,6 @@
 
 import { useCallback, useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { encryptPayload } from "@/lib/crypto";
 import { useRouter } from "next/navigation";
 
 interface ChatMessage {
@@ -57,6 +56,7 @@ const sanitizeText = (text: string): string => {
   sanitized = sanitized.replace(/[<>{}[\]\\;]/g, "");
   return sanitized;
 };
+
 function sanitizeClientInput(text: string): string {
   let cleaned = text.replace(/[<>{}[\]\\;'"`]/g, "");
   cleaned = cleaned.replace(/[\u0000-\u001F\u007F-\u009F]/g, "");
@@ -124,22 +124,115 @@ const isLightColor = (rgbTriplet: string): boolean => {
 
 const DEFAULT_BG_TRIPLET = "15, 23, 42";
 
+// Default context untuk server-side
+const DEFAULT_PROFILE_CONTEXT: ProfileContext = {
+  skills: [],
+  experience: [],
+  projects: [],
+  about: "",
+  contact: "",
+  summary: "Pemilik portofolio memiliki berbagai keahlian. Tanyakan sesuatu tentang pemilik.",
+};
+
+// --------------------------------------------------------------
+// Fungsi extractProfileContext dipindahkan ke luar komponen (pure, tidak perlu useCallback)
+// --------------------------------------------------------------
+function extractProfileContext(): ProfileContext {
+  // Guard: jika tidak ada document, return default
+  if (typeof document === "undefined") {
+    return DEFAULT_PROFILE_CONTEXT;
+  }
+
+  const skills: string[] = [];
+  const experience: string[] = [];
+  const projects: string[] = [];
+  let about = "";
+  let contact = "";
+
+  const skillsSection = document.querySelector("#skills");
+  if (skillsSection) {
+    const skillItems = skillsSection.querySelectorAll("li, .skill-item, span");
+    skillItems.forEach((item) => {
+      const text = item.textContent?.trim();
+      if (text && text.length > 1 && text.length < 50) {
+        skills.push(text);
+      }
+    });
+  }
+
+  const experienceSection = document.querySelector("#experience");
+  if (experienceSection) {
+    const roles = experienceSection.querySelectorAll("h3, p");
+    roles.forEach((item) => {
+      const text = item.textContent?.trim();
+      if (text && text.length > 10) {
+        experience.push(text);
+      }
+    });
+  }
+
+  const projectsSection = document.querySelector("#projects");
+  if (projectsSection) {
+    const projectItems = projectsSection.querySelectorAll("h3, .project-name, a");
+    projectItems.forEach((item) => {
+      const text = item.textContent?.trim();
+      if (text && text.length > 3 && text.length < 100) {
+        projects.push(text);
+      }
+    });
+  }
+
+  const aboutSection = document.querySelector("#about");
+  if (aboutSection) {
+    const aboutParagraph = aboutSection.querySelector("p");
+    const aboutText = aboutParagraph?.textContent || aboutSection.textContent || "";
+    about = sanitizeText(aboutText.replace(/\s+/g, " ").trim().substring(0, 800));
+  }
+
+  const contactSection = document.querySelector("#contact");
+  if (contactSection) {
+    const contactText = contactSection.textContent?.trim() || "";
+    contact = sanitizeText(contactText.substring(0, 300));
+  }
+
+  const allSkills = [...new Set(skills)].map((s) => s.toLowerCase());
+
+  return {
+    skills: allSkills.slice(0, 10),
+    experience: [...new Set(experience)].map((e) => sanitizeText(e)),
+    projects: [...new Set(projects)].map((p) => sanitizeText(p)),
+    about,
+    contact: contact || "Informasi kontak dapat dilihat di bagian kontak halaman.",
+    summary: `Pemilik portofolio memiliki total ${allSkills.length} keahlian. Berikan jawaban yang detail dan bermanfaat. Jika ditanya tentang keahlian, sebutkan beberapa contoh utama dan jelaskan konteks penggunaannya. Jangan menyebutkan semua keahlian sekaligus.`,
+  };
+}
+
 export default function AIBrain() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isOpen, setIsOpen] = useState(false);
-  const [profileContext, setProfileContext] = useState<ProfileContext | null>(
-    null,
-  );
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
+  // --------------------------------------------------------------
+  // STATE profileContext diinisialisasi dengan lazy initializer
+  // Hanya berjalan di client (karena cek typeof window)
+  // --------------------------------------------------------------
+  const [profileContext, setProfileContext] = useState<ProfileContext>(() => {
+    if (typeof window === "undefined") {
+      return DEFAULT_PROFILE_CONTEXT;
+    }
+    return extractProfileContext();
+  });
+
+  // 4. Background detection (sudah pakai useEffect, jadi aman)
   const [bgTriplet, setBgTriplet] = useState<string>("15, 23, 42");
 
   useEffect(() => {
     const detectBg = () => {
+      if (typeof document === "undefined") return;
       const candidates = [
         document.querySelector("#profile"),
         document.querySelector("#about"),
@@ -191,83 +284,9 @@ export default function AIBrain() {
     ? "rgba(0,0,0,0.06)"
     : "rgba(255,255,255,0.06)";
 
-  const extractProfileContext = useCallback((): ProfileContext => {
-    const skills: string[] = [];
-    const experience: string[] = [];
-    const projects: string[] = [];
-    let about = "";
-    let contact = "";
-
-    const skillsSection = document.querySelector("#skills");
-    if (skillsSection) {
-      const skillItems = skillsSection.querySelectorAll(
-        "li, .skill-item, span",
-      );
-      skillItems.forEach((item) => {
-        const text = item.textContent?.trim();
-        if (text && text.length > 1 && text.length < 50) {
-          skills.push(text);
-        }
-      });
-    }
-
-    const experienceSection = document.querySelector("#experience");
-    if (experienceSection) {
-      const roles = experienceSection.querySelectorAll("h3, p");
-      roles.forEach((item) => {
-        const text = item.textContent?.trim();
-        if (text && text.length > 10) {
-          experience.push(text);
-        }
-      });
-    }
-
-    const projectsSection = document.querySelector("#projects");
-    if (projectsSection) {
-      const projectItems = projectsSection.querySelectorAll(
-        "h3, .project-name, a",
-      );
-      projectItems.forEach((item) => {
-        const text = item.textContent?.trim();
-        if (text && text.length > 3 && text.length < 100) {
-          projects.push(text);
-        }
-      });
-    }
-
-    const aboutSection = document.querySelector("#about");
-    if (aboutSection) {
-      const aboutParagraph = aboutSection.querySelector("p");
-      const aboutText =
-        aboutParagraph?.textContent || aboutSection.textContent || "";
-      about = sanitizeText(
-        aboutText.replace(/\s+/g, " ").trim().substring(0, 800),
-      );
-    }
-
-    const contactSection = document.querySelector("#contact");
-    if (contactSection) {
-      const contactText = contactSection.textContent?.trim() || "";
-      contact = sanitizeText(contactText.substring(0, 300));
-    }
-
-    const allSkills = [...new Set(skills)].map((s) => s.toLowerCase());
-
-    return {
-      skills: allSkills.slice(0, 10),
-      experience: [...new Set(experience)].map((e) => sanitizeText(e)),
-      projects: [...new Set(projects)].map((p) => sanitizeText(p)),
-      about,
-      contact:
-        contact || "Informasi kontak dapat dilihat di bagian kontak halaman.",
-      summary: `Pemilik portofolio memiliki total ${allSkills.length} keahlian. Berikan jawaban yang detail dan bermanfaat. Jika ditanya tentang keahlian, sebutkan beberapa contoh utama dan jelaskan konteks penggunaannya. Jangan menyebutkan semua keahlian sekaligus.`,
-    };
-  }, []);
-
+  // 5. Efek untuk memperbarui konteks saat DOM berubah (hanya client)
+  //    Sekarang tanpa setState langsung di body efek, melainkan di callback observer
   useEffect(() => {
-    const context = extractProfileContext();
-    setProfileContext(context);
-
     const observer = new MutationObserver(() => {
       const newContext = extractProfileContext();
       setProfileContext(newContext);
@@ -280,7 +299,7 @@ export default function AIBrain() {
     });
 
     return () => observer.disconnect();
-  }, [extractProfileContext]);
+  }, []); // tidak perlu dependency extractProfileContext karena fungsi sudah stabil
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -302,14 +321,7 @@ export default function AIBrain() {
       };
       for (const [keyword, path] of Object.entries(routeMaps)) {
         if (message.includes(keyword)) {
-          const navWords = [
-            "buka",
-            "lihat",
-            "ke",
-            "tunjukkan",
-            "arahkan",
-            "pergi",
-          ];
+          const navWords = ["buka", "lihat", "ke", "tunjukkan", "arahkan", "pergi"];
           if (navWords.some((w) => message.includes(w))) {
             router.push(path);
             return keyword;
@@ -318,33 +330,22 @@ export default function AIBrain() {
       }
 
       const sectionMaps: Record<string, string> = {
-        // Skills
         skill: "skills",
         keahlian: "skills",
         teknologi: "skills",
         "tech stack": "skills",
-
-        // Experience
         pengalaman: "experience",
         experience: "experience",
         kerja: "experience",
-
-        // Projects
         proyek: "projects",
         project: "projects",
         portfolio: "projects",
-
-        // Contact
         kontak: "contact",
         hubungi: "contact",
         contact: "contact",
-
-        // About
         tentang: "about",
         about: "about",
         siapa: "about",
-
-        // PROFILE
         profile: "profile",
         profil: "profile",
       };
@@ -372,7 +373,6 @@ export default function AIBrain() {
     [router],
   );
 
-  // GANTI SELURUH handleSubmit JADI INI
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
       e.preventDefault();
@@ -397,8 +397,7 @@ export default function AIBrain() {
           }),
         });
 
-        if (!response.ok)
-          throw new Error((await response.json()).error || "Gagal");
+        if (!response.ok) throw new Error((await response.json()).error || "Gagal");
         setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
         const reader = response.body!.getReader();
         const decoder = new TextDecoder();
@@ -416,13 +415,13 @@ export default function AIBrain() {
             return updated;
           });
         }
-      } catch (err: any) {
-        setErrorMsg(err.message);
+      } catch (err: unknown) {
+        setErrorMsg(err instanceof Error ? err.message : "Terjadi kesalahan");
       } finally {
         setIsGenerating(false);
       }
     },
-    [input, isGenerating, profileContext, autoNavigateToSection],
+    [input, isGenerating, autoNavigateToSection],
   );
 
   const highlightKeywords = (text: string) => {
@@ -457,7 +456,9 @@ export default function AIBrain() {
       ),
     );
   };
+
   return (
+    // ... (JSX sama seperti sebelumnya)
     <>
       <style>{`
         .ai-brain-container, .ai-brain-container * { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
@@ -559,10 +560,7 @@ export default function AIBrain() {
               className={`px-4 py-3 border-b ${headerBorder} flex items-center justify-between flex-shrink-0`}
             >
               <div>
-                <h2
-                  className="text-base font-extrabold"
-                  style={{ color: textPrimary }}
-                >
+                <h2 className="text-base font-extrabold" style={{ color: textPrimary }}>
                   AGEN AI
                 </h2>
                 <p className="text-xs" style={{ color: textSecondary }}>
@@ -614,9 +612,7 @@ export default function AIBrain() {
                         : undefined
                     }
                   >
-                    {m.role === "assistant"
-                      ? highlightKeywords(m.content)
-                      : m.content}
+                    {m.role === "assistant" ? highlightKeywords(m.content) : m.content}
                   </div>
                 </div>
               ))}
@@ -681,9 +677,7 @@ export default function AIBrain() {
               <button
                 type="submit"
                 disabled={
-                  isGenerating ||
-                  !input.trim() ||
-                  input === "[Pertanyaan tidak valid]"
+                  isGenerating || !input.trim() || input === "[Pertanyaan tidak valid]"
                 }
                 className="px-4 py-2 rounded-full bg-[#007AFF] text-white text-sm font-medium disabled:opacity-50 transition"
               >

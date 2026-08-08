@@ -19,7 +19,7 @@ function applySylvorHeaders(res: NextResponse): NextResponse {
   return res;
 }
 
-function logSecurityEvent(type: string, req: NextRequest, extra: any = {}) {
+function logSecurityEvent(type: string, req: NextRequest, extra: Record<string, unknown> = {}) {
   const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || req.headers.get('x-real-ip') || '127.0.0.1';
   const ua = (req.headers.get('user-agent') || '').substring(0, 80);
   console.warn(`[SECURITY] ${type} | ip=${ip} | ua=${ua} |`, JSON.stringify(extra));
@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => ({}));
   const { dpr, challenge, nonce, solveTimeMs, automationFlags } = body;
 
-  const powValid = verifyChallengeSolution(challenge, nonce, request as any);
+  const powValid = verifyChallengeSolution(challenge, nonce, request);
   if (!powValid) {
     logSecurityEvent('POW_FAIL', request, { challenge: challenge?.substring(0, 30)+'...' });
     const res = NextResponse.json({ error: 'Challenge verification failed' }, { status: 403 });
@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
     return applySylvorHeaders(res);
   }
 
-  const suspiciousFlags: string[] = Array.isArray(automationFlags)? automationFlags : [];
+  const suspiciousFlags: string[] = Array.isArray(automationFlags) ? automationFlags : [];
   if (suspiciousFlags.includes('webdriver') && suspiciousFlags.length >= 2) {
     logSecurityEvent('AUTOMATION_DETECTED', request, { flags: suspiciousFlags });
     const res = NextResponse.json({ error: 'Automation detected' }, { status: 403 });

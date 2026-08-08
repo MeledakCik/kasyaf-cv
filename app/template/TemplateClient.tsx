@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { TiltCard } from "@/components/function/TiltCard";
 import { TEMPLATE_CATEGORIES, TEMPLATES } from "@/lib/templates-data";
@@ -14,15 +13,10 @@ export default function TemplateClient({
 }) {
   const router = useRouter();
 
-  const [activeCategory, setActiveCategory] = useState(initialCategory);
-
-  useEffect(() => {
-    setActiveCategory(initialCategory);
-  }, [initialCategory]);
+  // Menggunakan initialCategory langsung dari props tanpa useState & useEffect
+  const activeCategory = initialCategory;
 
   const handleFilterClick = (cat: string) => {
-    setActiveCategory(cat);
-
     router.push(cat === "All" ? "/template" : `/template?category=${cat}`);
   };
 
