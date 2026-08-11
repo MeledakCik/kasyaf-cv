@@ -1,5 +1,6 @@
-// app/api/chat-ai/route.ts - FINAL v6 (tanpa internal token)
+// app/api/chat-ai/route.ts - FINAL v7 (Hardened & Proxy Integrated)
 import { NextRequest, NextResponse } from "next/server";
+import { verifyInternalToken } from "@/lib/auth";
 
 const MAX_MESSAGE_LENGTH = 2000;
 const GROQ_TIMEOUT_MS = 15000;
@@ -47,17 +48,7 @@ const injectionPhrases = [
   /system\s+prompt/i,
 ];
 
-function isRequestFromBrowser(req: NextRequest): boolean {
-  const secChUa = req.headers.get('sec-ch-ua');
-  const secFetchSite = req.headers.get('sec-fetch-site');
-  const ua = req.headers.get('user-agent') || '';
-  if (!secChUa || !secFetchSite) return false;
-  if (!/Mozilla|Chrome|Safari|Firefox/i.test(ua)) return false;
-  if (secFetchSite !== 'same-origin') return false;
-  return true;
-}
-
-// === KONTEKS PORTFOLIO (tidak perlu dari client) ===
+// === KONTEKS PORTFOLIO ===
 const CV_CONTEXT = `
 NAMA: Muhammad Kasyaf Anugrah - Full Stack Developer & Cyber Security Enthusiast
 LOKASI: Bandung, Indo - Universitas Komputer Indonesia
@@ -79,18 +70,27 @@ KONTEKS: ${CV_CONTEXT}`;
 
 export async function POST(request: NextRequest) {
   try {
-    // 🔥 HAPUS pemeriksaan internal token
-    // Gunakan session ID dari header (atau buat sendiri)
-    const sessionIdFromHeader = request.headers.get('x-session-id') || crypto.randomUUID();
+    const pathname = request.nextUrl.pathname;
+    
+    // -------------------------------------------------------------------------
+    // 1. VERIFIKASI INTERNAL TOKEN DARI PROXY
+    // Memastikan request HANYA bisa lewat jika diproses oleh proxy.ts
+    // -------------------------------------------------------------------------
+    const internalToken = request.headers.get('x-internal-auth');
+    const isValidToken = await verifyInternalToken(internalToken, pathname);
 
-    // Browser detection
-    if (!isRequestFromBrowser(request)) {
-      logSecurityEvent('BLOCKED_NOT_BROWSER', request);
-      return jsonWithSecurity({ error: "Browser only" }, { status: 403 });
+    if (!isValidToken) {
+      logSecurityEvent('UNAUTHORIZED_DIRECT_API_ACCESS', request, { pathname });
+      return jsonWithSecurity({ error: "Unauthorized access" }, { status: 401 });
     }
 
-    // Rate limit per session
-    if (!checkRateLimit(sessionIdFromHeader)) {
+    // Ambil Session ID sah yang disuntikkan oleh Proxy
+    const sessionId = request.headers.get('x-session-id') || 'unknown-session';
+
+    // -------------------------------------------------------------------------
+    // 2. RATE LIMITING PER SESSION
+    // -------------------------------------------------------------------------
+    if (!checkRateLimit(sessionId)) {
       return jsonWithSecurity({ error: "Too many requests" }, { status: 429 });
     }
 
@@ -99,24 +99,30 @@ export async function POST(request: NextRequest) {
 
     const { message, detectedSection, _ts, _nonce } = body;
 
-    // Anti-replay
+    // -------------------------------------------------------------------------
+    // 3. ANTI-REPLAY PROTECTION
+    // -------------------------------------------------------------------------
     const now = Date.now();
     if (!_ts || Math.abs(now - _ts) > REPLAY_WINDOW_MS) {
-      return jsonWithSecurity({ error: "Expired, refresh page" }, { status: 400 });
+      return jsonWithSecurity({ error: "Expired request timestamp" }, { status: 400 });
     }
     if (!_nonce || usedNonces.has(_nonce)) {
-      return jsonWithSecurity({ error: "Already used (anti-replay)" }, { status: 400 });
+      return jsonWithSecurity({ error: "Replay attack detected" }, { status: 400 });
     }
     usedNonces.set(_nonce, now);
+
+    // Housekeeping nonce cache
     if (usedNonces.size > 5000) {
       for (const [k, v] of usedNonces) {
         if (now - v > REPLAY_WINDOW_MS) usedNonces.delete(k);
       }
     }
 
-    // Validasi panjang & injection
+    // -------------------------------------------------------------------------
+    // 4. VALIDASI INPUT & PROMPT INJECTION GUARD
+    // -------------------------------------------------------------------------
     if (message.length > MAX_MESSAGE_LENGTH) {
-      return jsonWithSecurity({ error: "Too long" }, { status: 400 });
+      return jsonWithSecurity({ error: "Message too long" }, { status: 400 });
     }
     if (injectionPhrases.some(re => re.test(message))) {
       return jsonWithSecurity({
@@ -130,6 +136,9 @@ export async function POST(request: NextRequest) {
 
     const systemPrompt = buildSystemPrompt(detectedSection || null);
 
+    // -------------------------------------------------------------------------
+    // 5. GROQ API CALL & STREAMING RESPONSE
+    // -------------------------------------------------------------------------
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), GROQ_TIMEOUT_MS);
 
@@ -154,7 +163,7 @@ export async function POST(request: NextRequest) {
     clearTimeout(timeoutId);
 
     if (!groqResponse.ok) {
-      return jsonWithSecurity({ error: "AI error" }, { status: 500 });
+      return jsonWithSecurity({ error: "AI service error" }, { status: 500 });
     }
 
     const stream = new ReadableStream({
@@ -180,7 +189,7 @@ export async function POST(request: NextRequest) {
               const json = JSON.parse(data);
               const content = json.choices?.[0]?.delta?.content;
               if (content) ctrl.enqueue(new TextEncoder().encode(content));
-            } catch { /* ignore */ }
+            } catch { /* ignore invalid JSON chunks */ }
           }
         }
         ctrl.close();
@@ -189,16 +198,19 @@ export async function POST(request: NextRequest) {
 
     const res = new Response(stream, {
       headers: {
-        "Content-Type": "application/octet-stream",
-        "Cache-Control": "no-cache",
+        "Content-Type": "text/plain; charset=utf-8",
+        "Cache-Control": "no-cache, no-transform",
         "X-Content-Type-Options": "nosniff"
       }
     });
     applySylvorHeaders(res);
     return res;
 
-  } catch (e) {
-    console.error(e);
-    return jsonWithSecurity({ error: "Internal error" }, { status: 500 });
+  } catch (e: any) {
+    if (e.name === 'AbortError') {
+      return jsonWithSecurity({ error: "AI response timeout" }, { status: 504 });
+    }
+    console.error('[API Error]', e);
+    return jsonWithSecurity({ error: "Internal server error" }, { status: 500 });
   }
 }
