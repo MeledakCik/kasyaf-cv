@@ -1,7 +1,13 @@
-// proxy.ts - FINAL v9.1 (Hardened & Edge-Optimized)
+// proxy.ts - FINAL v9.2 (Hardened, Edge-Optimized & Integrated)
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { verifySessionWithDevice, signSessionWithDevice, signInternalToken, hmacIdentifier } from '@/lib/auth';
+import { 
+  verifySessionWithDevice, 
+  signSessionWithDevice, 
+  signInternalToken, 
+  hmacIdentifier 
+} from '@/lib/auth';
+import { validateOrigin } from '@/lib/origin-guard';
 
 const VERIFY_PATH = process.env.VERIFY_PATH || '/v2/shield-verify';
 const API_PATH = process.env.API_PATH || '/api/';
@@ -56,7 +62,7 @@ function getRateLimitConfigAndCheck(compositeId: string, pathname: string): bool
   const now = Date.now();
   const config = getRateLimitConfig(pathname);
 
-  // Safety valve memori untuk Edge Runtime
+  // Memory safety valve
   if (rateLimitMap.size > 10000) rateLimitMap.clear();
 
   const entry = rateLimitMap.get(compositeId);
@@ -66,7 +72,7 @@ function getRateLimitConfigAndCheck(compositeId: string, pathname: string): bool
     return true;
   }
 
-  // Mitigasi L7 Burst (Request dalam orde milidetik)
+  // L7 Burst Mitigation
   if (now - entry.lastSeen < 10 && entry.count > 5) {
     return false;
   }
@@ -84,10 +90,10 @@ function isBot(req: NextRequest): boolean {
     return false;
   }
 
-  // 2. UA Kosong / Pendek
-  if (!ua || ua.length < 12) return true;
+  // 2. UA Kosong / Terlalu Pendek
+  if (!ua || ua.length < 8) return true;
 
-  // 3. Known Scrapers & Tools
+  // 3. Known Scrapers & CLI Tools
   const knownScrapers = [
     'curl', 'wget', 'python', 'urllib', 'postman', 'insomnia', 'axios', 'node-fetch',
     'scrapy', 'httpclient', 'go-http-client', 'java', 'libwww-perl', 'zgrab'
@@ -101,12 +107,11 @@ function isBot(req: NextRequest): boolean {
   ];
   if (headlessSignatures.some(sig => ua.includes(sig))) return true;
 
-  // 5. Header Integrity Check
-  const hasAccept = !!req.headers.get('accept');
-  const hasAcceptLang = !!req.headers.get('accept-language');
-
-  if (!hasAccept || !hasAcceptLang) {
-    return true;
+  // 5. Header Integrity Check (Loloskan jika request RSC Next.js / Fetch internal)
+  const isRsc = req.headers.has('x-nextjs-data') || req.headers.get('accept')?.includes('text/x-component');
+  if (!isRsc) {
+    const hasAccept = !!req.headers.get('accept');
+    if (!hasAccept) return true;
   }
 
   return false;
@@ -175,10 +180,20 @@ export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const ua = request.headers.get('user-agent') || '';
   const ip = getClientIp(request);
-  const SECRET_KEY = process.env.COOKIE_SECRET!;
+  const SECRET_KEY = process.env.COOKIE_SECRET || 'default-fallback-secret-key-32chars';
   const isProd = process.env.NODE_ENV === 'production';
 
-  // Invalidate cache rate limit
+  // ---------------------------------------------------------------------------
+  // STEP 0: ORIGIN GUARD (CSRF PREVENTION FOR MUTATING REQUESTS)
+  // ---------------------------------------------------------------------------
+  const originErrorResponse = validateOrigin(request);
+  if (originErrorResponse) {
+    logSecurityEvent('ORIGIN_CSRF_BLOCKED', request, { pathname });
+    setSecurityHeaders(originErrorResponse, nonce, pathname);
+    return originErrorResponse;
+  }
+
+  // Cleanup Rate Limit Cache
   if (Date.now() - lastCleanup > 60_000) {
     for (const [k, v] of rateLimitMap) {
       if (Date.now() - v.lastSeen > 5 * 60_000) rateLimitMap.delete(k);
@@ -286,7 +301,8 @@ export async function proxy(request: NextRequest) {
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set('x-nonce', nonce);
   requestHeaders.set('x-session-id', rawSessionId);
-  requestHeaders.set('x-internal-auth', await signInternalToken(sessionId!, pathname));
+  // FIX: Mengirim rawSessionId yang valid ke signInternalToken
+  requestHeaders.set('x-internal-auth', await signInternalToken(rawSessionId, pathname));
 
   const response = NextResponse.next({ request: { headers: requestHeaders } });
 

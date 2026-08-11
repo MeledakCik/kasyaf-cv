@@ -1,17 +1,36 @@
-// app/api/convert/route.ts
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 
 const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:8000';
 const TIMEOUT = 120000;
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
-    const { url } = await request.json();
-    if (!url) {
+    // Validasi Cookie Session Internal
+    const sessionId = request.cookies.get('__Host-session_id')?.value || request.cookies.get('session_id')?.value;
+    if (!sessionId) {
+      return NextResponse.json({ success: false, error: 'Unauthorized: Session required' }, { status: 401 });
+    }
+
+    const { url } = await request.json().catch(() => ({}));
+    if (!url || typeof url !== 'string') {
       return NextResponse.json(
-        { success: false, error: 'URL diperlukan' },
+        { success: false, error: 'URL tidak valid atau kosong' },
         { status: 400 }
       );
+    }
+
+    // === FIX SSRF: HANYA IZINKAN PROTOKOL HTTP/HTTPS LUAR ===
+    try {
+      const parsedUrl = new URL(url);
+      if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
+        return NextResponse.json({ success: false, error: 'Protokol URL tidak didukung' }, { status: 400 });
+      }
+      // Blokir jika mencoba menembak IP privat/internal (SSRF Prevention)
+      if (['localhost', '127.0.0.1', '0.0.0.0', '169.254.169.254'].includes(parsedUrl.hostname)) {
+        return NextResponse.json({ success: false, error: 'Akses ke domain internal dilarang' }, { status: 403 });
+      }
+    } catch {
+      return NextResponse.json({ success: false, error: 'Format URL salah' }, { status: 400 });
     }
 
     const controller = new AbortController();
@@ -40,7 +59,6 @@ export async function POST(request: Request) {
         const base = BACKEND_URL.replace(/\/$/, '');
         const path = audioUrl.replace(/^https?:\/\/[^\/]+/, '');
         audioUrl = `${base}${path}`;
-        console.log('✅ URL lokal diganti menjadi:', audioUrl);
       }
     }
 

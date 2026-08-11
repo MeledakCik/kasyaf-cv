@@ -12,7 +12,10 @@ function randomHex(length: number): string {
 }
 
 function applySylvorHeaders(res: NextResponse): NextResponse {
-  res.headers.set('Accept-CH', 'Sec-CH-UA, Sec-CH-UA-Mobile, Sec-CH-UA-Platform, Sec-CH-UA-Arch, Viewport-Width, Width, DPR');
+  res.headers.set(
+    'Accept-CH',
+    'Sec-CH-UA, Sec-CH-UA-Mobile, Sec-CH-UA-Platform, Sec-CH-UA-Arch, Viewport-Width, Width, DPR'
+  );
   res.headers.set('Critical-CH', 'Sec-CH-UA, Sec-CH-UA-Mobile');
   res.headers.set('X-Cik-Guard', 'active');
   res.headers.delete('x-powered-by');
@@ -26,12 +29,14 @@ function logSecurityEvent(type: string, req: NextRequest, extra: Record<string, 
 }
 
 export async function POST(request: NextRequest) {
+  // 1. Validasi CSRF / Origin Guard
   const originError = validateOrigin(request);
   if (originError) {
     logSecurityEvent('ORIGIN_FAIL', request, { origin: request.headers.get('origin') });
     return applySylvorHeaders(originError as NextResponse);
   }
 
+  // 2. Cek Konfigurasi Server
   if (!process.env.COOKIE_SECRET) {
     const res = NextResponse.json({ error: 'Server misconfigured' }, { status: 500 });
     return applySylvorHeaders(res);
@@ -40,19 +45,22 @@ export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => ({}));
   const { dpr, challenge, nonce, solveTimeMs, automationFlags } = body;
 
+  // 3. Verifikasi Proof-of-Work Challenge
   const powValid = verifyChallengeSolution(challenge, nonce, request);
   if (!powValid) {
-    logSecurityEvent('POW_FAIL', request, { challenge: challenge?.substring(0, 30)+'...' });
+    logSecurityEvent('POW_FAIL', request, { challenge: challenge?.substring(0, 30) + '...' });
     const res = NextResponse.json({ error: 'Challenge verification failed' }, { status: 403 });
     return applySylvorHeaders(res);
   }
 
+  // 4. Deteksi Pemecahan Challenge Mencegah Script Instant Solve (< 50ms)
   if (typeof solveTimeMs === 'number' && solveTimeMs < 50) {
     logSecurityEvent('BOT_FAST_SOLVE', request, { solveTimeMs });
     const res = NextResponse.json({ error: 'Suspicious solve timing' }, { status: 403 });
     return applySylvorHeaders(res);
   }
 
+  // 5. Deteksi Flag Otomatisasi (Selenium/Puppeteer/WebDriver)
   const suspiciousFlags: string[] = Array.isArray(automationFlags) ? automationFlags : [];
   if (suspiciousFlags.includes('webdriver') && suspiciousFlags.length >= 2) {
     logSecurityEvent('AUTOMATION_DETECTED', request, { flags: suspiciousFlags });
@@ -61,7 +69,8 @@ export async function POST(request: NextRequest) {
   }
 
   const ua = request.headers.get('user-agent') || '';
-  // baca dua-duanya biar support migrasi
+  
+  // Baca cookie yang ada untuk mendukung backward compatibility/migrasi
   const existingDeviceId = request.cookies.get('__Host-device_id')?.value || request.cookies.get('device_id')?.value;
   const deviceId = existingDeviceId || randomBytes(32).toString('hex');
   const rawSessionId = randomHex(32);
@@ -78,26 +87,57 @@ export async function POST(request: NextRequest) {
     maxAge: SESSION_MAX_AGE,
   };
 
+  // Set Cookie Publik & Bersihkan Legacy Token
   res.cookies.set('dpr', String(dpr || 1), publicOpts);
   res.cookies.delete('surt');
   res.cookies.delete('did');
   res.cookies.delete('ckstoken');
 
-  // === FIX PALING PENTING BIAR GAK LOOP ===
+  // === DUAL-MODE COOKIE HANDLING (PROD VS DEV) ===
   if (isProd) {
-    // PRODUCTION (Vercel): WAJIB __Host- + Secure true = paling aman anti subdomain hijack
+    // PRODUCTION (HTTPS / Vercel): Mencegah Subdomain Hijacking dengan Prefix __Host-
     res.cookies.delete('device_id');
     res.cookies.delete('session_id');
-    res.cookies.set('__Host-device_id', deviceId, { path:'/', sameSite:'strict', secure:true, httpOnly:true, maxAge: 30*86400 });
-    res.cookies.set('__Host-session_id', signedSessionId, { path:'/', sameSite:'strict', secure:true, httpOnly:true, maxAge: SESSION_MAX_AGE });
-    console.log(`[SESSION] OK PROD | ip=${request.headers.get('x-forwarded-for')?.split(',')[0]} | device=${deviceId.substring(0,8)}...`);
+    
+    res.cookies.set('__Host-device_id', deviceId, { 
+      path: '/', 
+      sameSite: 'strict', 
+      secure: true, 
+      httpOnly: true, 
+      maxAge: 30 * 86400 
+    });
+    
+    res.cookies.set('__Host-session_id', signedSessionId, { 
+      path: '/', 
+      sameSite: 'strict', 
+      secure: true, 
+      httpOnly: true, 
+      maxAge: SESSION_MAX_AGE 
+    });
+
+    console.log(`[SESSION] OK PROD | ip=${request.headers.get('x-forwarded-for')?.split(',')[0]} | device=${deviceId.substring(0, 8)}...`);
   } else {
-    // DEV LOCALHOST: JANGAN pakai __Host- karena Chrome bakal drop kalau secure:false
+    // DEV (HTTP Localhost): Tanpa __Host- agar browser tidak menolak cookie saat Secure=false
     res.cookies.delete('__Host-device_id');
     res.cookies.delete('__Host-session_id');
-    res.cookies.set('device_id', deviceId, { path:'/', sameSite:'strict', secure:false, httpOnly:true, maxAge: 30*86400 });
-    res.cookies.set('session_id', signedSessionId, { path:'/', sameSite:'strict', secure:false, httpOnly:true, maxAge: SESSION_MAX_AGE });
-    console.log(`[SESSION] OK DEV | ip=127.0.0.1 | device=${deviceId.substring(0,8)}...`);
+    
+    res.cookies.set('device_id', deviceId, { 
+      path: '/', 
+      sameSite: 'strict', 
+      secure: false, 
+      httpOnly: true, 
+      maxAge: 30 * 86400 
+    });
+    
+    res.cookies.set('session_id', signedSessionId, { 
+      path: '/', 
+      sameSite: 'strict', 
+      secure: false, 
+      httpOnly: true, 
+      maxAge: SESSION_MAX_AGE 
+    });
+
+    console.log(`[SESSION] OK DEV | ip=127.0.0.1 | device=${deviceId.substring(0, 8)}...`);
   }
 
   return applySylvorHeaders(res);

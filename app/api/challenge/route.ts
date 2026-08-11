@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { generateChallenge } from '@/lib/pow-challenge';
 
-const challengeHits = new Map<string, { count: number, reset: number }>();
+const challengeHits = new Map<string, { count: number; reset: number }>();
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://kasyaf-cv.my.id';
 
 function applySylvorHeaders(res: NextResponse): NextResponse {
@@ -17,32 +17,30 @@ function applySylvorHeaders(res: NextResponse): NextResponse {
   return res;
 }
 
-function cleanup() {
-  if (challengeHits.size > 5000) {
+// FIX: Memory Cleanup Valve yang Aman
+function enforceMapLimit() {
+  if (challengeHits.size > 2000) {
     const now = Date.now();
     for (const [k, v] of challengeHits) {
-      if (now - v.reset > 120_000) challengeHits.delete(k);
+      if (now - v.reset > 60_000) challengeHits.delete(k);
     }
+    // Hard Limit Safety Valve jika diserang jutaan IP unik
+    if (challengeHits.size > 5000) challengeHits.clear();
   }
 }
 
 export async function GET(req: NextRequest) {
   try {
-    cleanup();
+    enforceMapLimit();
 
     const userAgent = req.headers.get('user-agent')?.toLowerCase() || '';
     const secFetchMode = req.headers.get('sec-fetch-mode');
     const accept = req.headers.get('accept') || '';
 
-    // === FIX 1: WHITELIST BOT - JANGAN DI-BLOCK ===
-    const isBot = userAgent.includes('googlebot') ||
-                  userAgent.includes('google-inspectiontool') ||
-                  userAgent.includes('bingbot') ||
-                  userAgent.includes('chrome-lighthouse') ||
-                  userAgent.includes('gtmetrix');
+    // === FIX 1: WHITELIST BOT ===
+    const isBot = ['googlebot', 'google-inspectiontool', 'bingbot', 'chrome-lighthouse', 'gtmetrix'].some(b => userAgent.includes(b));
 
     if (isBot) {
-      // Kasih challenge dummy biar gak error tapi gak usah POW
       const res = NextResponse.json(
         { challenge: 'bot-bypass', seed: 'bot', difficulty: 0, bot: true },
         { headers: { 'Cache-Control': 'no-store' } }
@@ -50,8 +48,7 @@ export async function GET(req: NextRequest) {
       return applySylvorHeaders(res);
     }
 
-    // === FIX 2: ANTI DIRECT ACCESS - TAPI IZININ NAVIGATE KALAU BUKAN FETCH API ===
-    // Yang diblock cuma kalau buka /api/challenge langsung di browser
+    // === FIX 2: ANTI DIRECT BROWSER NAVIGATE ===
     const isDirectApiAccess = req.nextUrl.pathname === '/api/challenge' &&
                               secFetchMode === 'navigate' &&
                               accept.includes('text/html');
@@ -61,8 +58,8 @@ export async function GET(req: NextRequest) {
       return applySylvorHeaders(res);
     }
 
-    // Rate limit tetep jalan
-    const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || '127.0.0.1';
+    // Rate limiting berbasis IP
+    const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || req.headers.get('x-real-ip') || '127.0.0.1';
     const now = Date.now();
     const entry = challengeHits.get(ip);
 
