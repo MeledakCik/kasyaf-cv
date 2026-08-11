@@ -1,4 +1,4 @@
-// proxy.ts - FINAL v8 (Advanced L7 Security, Vercel Edge Optimized & Anti-Bot)
+// proxy.ts - FINAL v9 (Full Traffic Inspection & Strict Crawler Block)
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { verifySessionWithDevice, signSessionWithDevice, signInternalToken, hmacIdentifier } from '@/lib/auth';
@@ -16,7 +16,7 @@ const PUBLIC_API_PREFIXES = [
   '/api/log'
 ];
 
-// Configuration Rate Limit (Window ms & Max Request)
+// Configuration Rate Limit (Requests per window)
 const RATE_LIMIT_CONFIG: Record<string, { window: number; max: number }> = {
   '/api/chat-ai': { window: 60_000, max: 20 },
   '/api/log': { window: 60_000, max: 15 },
@@ -43,7 +43,7 @@ function logSecurityEvent(type: string, req: NextRequest, extra: any = {}) {
 }
 
 /**
- * Ekstraksi IP yang Kompatibel dengan Vercel Edge Network
+ * Ekstraksi IP Kompatibel Vercel Edge & Cloudflare
  */
 function getClientIp(req: NextRequest): string {
   return (
@@ -66,7 +66,7 @@ function getRateLimitConfigAndCheck(compositeId: string, pathname: string): bool
     return true;
   }
 
-  // Mitigasi L7 Burst (Mencegah serangan request cepat dalam milidetik)
+  // Mitigasi L7 Burst (Mencegah serangan request super cepat dalam milidetik)
   if (now - entry.lastSeen < 10 && entry.count > 5) {
     return false;
   }
@@ -82,18 +82,18 @@ function getRateLimitConfigAndCheck(compositeId: string, pathname: string): bool
 function isBot(req: NextRequest): boolean {
   const ua = (req.headers.get('user-agent') || '').toLowerCase();
 
-  // 1. Izinkan Search Engine Bot Resmi
+  // 1. Izinkan Search Engine Bot Resmi jika dibutuhkan (opsional)
   if (['googlebot', 'bingbot', 'yandexbot', 'duckduckbot'].some(b => ua.includes(b))) {
     return false;
   }
 
-  // 2. Blokir jika User-Agent Kosong atau terlalu pendek
+  // 2. Blokir jika User-Agent Kosong atau kurang dari 12 karakter
   if (!ua || ua.length < 12) return true;
 
-  // 3. Blokir Scraper, HTTP Client library, & Automation tools
+  // 3. Blokir Scraper, HTTP Client library (termasuk urllib / python), & Automation tools
   const knownScrapers = [
-    'curl', 'wget', 'python', 'postman', 'insomnia', 'axios', 'node-fetch',
-    'scrapy', 'httpclient', 'go-http-client', 'java', 'libwww-perl', 'zgrab', 'urllib'
+    'curl', 'wget', 'python', 'urllib', 'postman', 'insomnia', 'axios', 'node-fetch',
+    'scrapy', 'httpclient', 'go-http-client', 'java', 'libwww-perl', 'zgrab'
   ];
   if (knownScrapers.some(bot => ua.includes(bot))) return true;
 
@@ -104,12 +104,12 @@ function isBot(req: NextRequest): boolean {
   ];
   if (headlessSignatures.some(sig => ua.includes(sig))) return true;
 
-  // 5. Header Integrity Check (Karakteristik Browser Modern)
+  // 5. Header Integrity Check (Karakteristik Browser Asli)
   const hasAccept = !!req.headers.get('accept');
   const hasAcceptLang = !!req.headers.get('accept-language');
 
   if (!hasAccept || !hasAcceptLang) {
-    return true; // Script bot otomatis sering tidak mengirimkan header ini
+    return true; // Script Python/DDOS otomatis sering membuang header ini
   }
 
   return false;
@@ -166,10 +166,7 @@ function setSecurityHeaders(res: NextResponse, nonce: string, pathname: string =
   res.headers.set('Cross-Origin-Embedder-Policy', isImage ? 'unsafe-none' : 'credentialless');
   res.headers.set('Cross-Origin-Resource-Policy', isImage ? 'cross-origin' : 'same-site');
   res.headers.set('Cross-Origin-Opener-Policy', 'same-origin');
-  
-  // Custom Guard Identification Header
   res.headers.set('X-Cik-Guard', 'active');
-  res.headers.set('X-Protected-By', 'Vercel-Custom-WAF');
 
   if (process.env.NODE_ENV === 'production') {
     res.headers.set('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload');
@@ -184,7 +181,7 @@ export async function proxy(request: NextRequest) {
   const SECRET_KEY = process.env.COOKIE_SECRET!;
   const isProd = process.env.NODE_ENV === 'production';
 
-  // Invalidate cache rate limit setiap 60 detik
+  // Invalidate cache rate limit
   if (Date.now() - lastCleanup > 60_000) {
     for (const [k, v] of rateLimitMap) {
       if (Date.now() - v.lastSeen > 5 * 60_000) rateLimitMap.delete(k);
@@ -192,7 +189,9 @@ export async function proxy(request: NextRequest) {
     lastCleanup = Date.now();
   }
 
-  // 1. Pengecekan Anti-Bot & Anti-Crawler Utama
+  // ---------------------------------------------------------------------------
+  // STEP 1: ANTI-BOT & CRAWLER CHECK (Dijalankan untuk SELURUH request)
+  // ---------------------------------------------------------------------------
   if (isBot(request)) {
     logSecurityEvent('BOT_CRAWLER_BLOCKED', request, { pathname });
     const res = new NextResponse('Access Denied', { status: 403 });
@@ -200,7 +199,9 @@ export async function proxy(request: NextRequest) {
     return res;
   }
 
-  // 2. Evaluasi Composite ID & Rate Limiting
+  // ---------------------------------------------------------------------------
+  // STEP 2: RATE LIMITING CHECK
+  // ---------------------------------------------------------------------------
   const isPublicChallenge = pathname.startsWith('/api/challenge') || pathname.startsWith('/api/session');
   const sessionIdRaw = request.cookies.get('__Host-session_id')?.value || request.cookies.get('session_id')?.value || 'no-session';
   const compositeId = await hmacIdentifier(SECRET_KEY, isPublicChallenge ? `${ip}:${pathname}` : `${ip}:${ua}:${sessionIdRaw}`);
@@ -212,7 +213,9 @@ export async function proxy(request: NextRequest) {
     return res;
   }
 
-  // 3. Bypass Langsung untuk Public API Prefix
+  // ---------------------------------------------------------------------------
+  // STEP 3: PUBLIC API BYPASS
+  // ---------------------------------------------------------------------------
   const isPublicApi = PUBLIC_API_PREFIXES.some(p => pathname.startsWith(p));
   if (isPublicApi) {
     const res = NextResponse.next({ request: { headers: new Headers({ ...Object.fromEntries(request.headers), 'x-nonce': nonce }) } });
@@ -220,14 +223,18 @@ export async function proxy(request: NextRequest) {
     return res;
   }
 
-  // 4. Bypass untuk Static Assets & Shield Verify Path
+  // ---------------------------------------------------------------------------
+  // STEP 4: STATIC ASSETS BYPASS (Hanya setelah Lolos Step 1 Bot Check & Step 2 Rate Limit)
+  // ---------------------------------------------------------------------------
   if (pathname.startsWith(VERIFY_PATH) || pathname.startsWith('/_next') || pathname.startsWith('/images') || pathname.includes('.') || pathname === '/favicon.ico') {
     const res = NextResponse.next({ request: { headers: new Headers({ ...Object.fromEntries(request.headers), 'x-nonce': nonce }) } });
     setSecurityHeaders(res, nonce, pathname);
     return res;
   }
 
-  // 5. Protected API Endpoints
+  // ---------------------------------------------------------------------------
+  // STEP 5: PROTECTED API ENDPOINTS
+  // ---------------------------------------------------------------------------
   if (pathname.startsWith(API_PATH)) {
     const sessionId = request.cookies.get('__Host-session_id')?.value || request.cookies.get('session_id')?.value;
     const deviceId = request.cookies.get('__Host-device_id')?.value || request.cookies.get('device_id')?.value;
@@ -249,7 +256,9 @@ export async function proxy(request: NextRequest) {
     return res;
   }
 
-  // 6. Page Auth Flow & Dynamic Routing
+  // ---------------------------------------------------------------------------
+  // STEP 6: PAGE AUTHENTICATION FLOW
+  // ---------------------------------------------------------------------------
   const deviceId = request.cookies.get('__Host-device_id')?.value || request.cookies.get('device_id')?.value;
   const sessionId = request.cookies.get('__Host-session_id')?.value || request.cookies.get('session_id')?.value;
   const rawSessionId = await verifySessionWithDevice(sessionId, deviceId, ua);
@@ -275,7 +284,7 @@ export async function proxy(request: NextRequest) {
 
   const response = NextResponse.next({ request: { headers: requestHeaders } });
 
-  // 7. Session Rotation Logic
+  // Session Rotation
   if (Date.now() - issuedAt > SESSION_ROTATE_AFTER_MS) {
     const newRaw = crypto.randomUUID().replace(/-/g, '');
     const newSigned = await signSessionWithDevice(newRaw, deviceId!, ua);
@@ -292,6 +301,9 @@ export async function proxy(request: NextRequest) {
   return response;
 }
 
+// MATCHER BARU: Menjangkau seluruh lalu lintas halaman & aset statis
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|images|img|assets|fonts|favicon.ico).*)'],
+  matcher: [
+    '/((?!_next/webpack-hmr).*)',
+  ],
 };
