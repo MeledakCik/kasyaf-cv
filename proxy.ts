@@ -1,11 +1,11 @@
-// proxy.ts - FINAL v9.2 (Hardened, Edge-Optimized & Integrated)
+// proxy.ts - FINAL v9.3 (Fixed for GSC Sitemap - Bypass SEO routes)
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { 
-  verifySessionWithDevice, 
-  signSessionWithDevice, 
-  signInternalToken, 
-  hmacIdentifier 
+import {
+  verifySessionWithDevice,
+  signSessionWithDevice,
+  signInternalToken,
+  hmacIdentifier
 } from '@/lib/auth';
 import { validateOrigin } from '@/lib/origin-guard';
 
@@ -62,7 +62,6 @@ function getRateLimitConfigAndCheck(compositeId: string, pathname: string): bool
   const now = Date.now();
   const config = getRateLimitConfig(pathname);
 
-  // Memory safety valve
   if (rateLimitMap.size > 10000) rateLimitMap.clear();
 
   const entry = rateLimitMap.get(compositeId);
@@ -72,7 +71,6 @@ function getRateLimitConfigAndCheck(compositeId: string, pathname: string): bool
     return true;
   }
 
-  // L7 Burst Mitigation
   if (now - entry.lastSeen < 10 && entry.count > 5) {
     return false;
   }
@@ -85,8 +83,8 @@ function getRateLimitConfigAndCheck(compositeId: string, pathname: string): bool
 function isBot(req: NextRequest): boolean {
   const ua = (req.headers.get('user-agent') || '').toLowerCase();
 
-  // 1. Search Engine Bot Resmi
-  if (['googlebot', 'bingbot', 'yandexbot', 'duckduckbot'].some(b => ua.includes(b))) {
+  // 1. Search Engine Bot Resmi - SELALU Lolos
+  if (['googlebot', 'bingbot', 'yandexbot', 'duckduckbot', 'google', 'adsbot', 'mediapartners'].some(b => ua.includes(b))) {
     return false;
   }
 
@@ -107,10 +105,10 @@ function isBot(req: NextRequest): boolean {
   ];
   if (headlessSignatures.some(sig => ua.includes(sig))) return true;
 
-  // 5. Header Integrity Check (Loloskan jika request RSC Next.js / Fetch internal)
+  // 5. Header Integrity Check
   const isRsc = req.headers.has('x-nextjs-data') || req.headers.get('accept')?.includes('text/x-component');
   if (!isRsc) {
-    const hasAccept = !!req.headers.get('accept');
+    const hasAccept =!!req.headers.get('accept');
     if (!hasAccept) return true;
   }
 
@@ -135,11 +133,11 @@ function base64urlDecodeToJson(b64url: string): any {
 }
 
 function buildCsp(nonce: string): string {
-  const isDev = process.env.NODE_ENV !== 'production';
+  const isDev = process.env.NODE_ENV!== 'production';
   const backendUrl = process.env.BACKEND_URL || 'https://melody-be-production.up.railway.app';
 
   const scriptSrc = isDev
-    ? `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' 'unsafe-eval' 'unsafe-inline' 'wasm-unsafe-eval' https://cdn.jsdelivr.net https://unpkg.com`
+   ? `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' 'unsafe-eval' 'unsafe-inline' 'wasm-unsafe-eval' https://cdn.jsdelivr.net https://unpkg.com`
     : `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' 'wasm-unsafe-eval' https://cdn.jsdelivr.net https://unpkg.com`;
 
   return [
@@ -165,8 +163,8 @@ function setSecurityHeaders(res: NextResponse, nonce: string, pathname: string =
   res.headers.set('Content-Security-Policy', buildCsp(nonce));
   res.headers.set('X-Content-Type-Options', 'nosniff');
   res.headers.set('X-Frame-Options', 'DENY');
-  res.headers.set('Cross-Origin-Embedder-Policy', isImage ? 'unsafe-none' : 'credentialless');
-  res.headers.set('Cross-Origin-Resource-Policy', isImage ? 'cross-origin' : 'same-site');
+  res.headers.set('Cross-Origin-Embedder-Policy', isImage? 'unsafe-none' : 'credentialless');
+  res.headers.set('Cross-Origin-Resource-Policy', isImage? 'cross-origin' : 'same-site');
   res.headers.set('Cross-Origin-Opener-Policy', 'same-origin');
   res.headers.set('X-Cik-Guard', 'active');
 
@@ -178,6 +176,34 @@ function setSecurityHeaders(res: NextResponse, nonce: string, pathname: string =
 export async function proxy(request: NextRequest) {
   const nonce = generateNonce();
   const { pathname } = request.nextUrl;
+
+  // ===========================================================================
+  // STEP -1: SEO & STATIC BYPASS (WAJIB PALING ATAS - FIX GSC ERROR)
+  // ===========================================================================
+  const SEO_BYPASS_PATHS = [
+    '/sitemap.xml',
+    '/robots.txt',
+    '/favicon.ico',
+    '/manifest.json',
+  ];
+
+  if (
+    SEO_BYPASS_PATHS.includes(pathname) ||
+    pathname.startsWith('/_next/static') ||
+    pathname.startsWith('/_next/image') ||
+    pathname.startsWith('/images/')
+  ) {
+    const reqHeaders = new Headers(request.headers);
+    reqHeaders.set('x-nonce', nonce);
+    const res = NextResponse.next({ request: { headers: reqHeaders } });
+    // Kasih header khusus biar tau ke-bypass
+    res.headers.set('X-Cik-Guard', 'bypass-seo');
+    if (pathname === '/sitemap.xml') {
+      res.headers.set('Content-Type', 'application/xml');
+    }
+    return res;
+  }
+
   const ua = request.headers.get('user-agent') || '';
   const ip = getClientIp(request);
   const SECRET_KEY = process.env.COOKIE_SECRET || 'default-fallback-secret-key-32chars';
@@ -216,7 +242,7 @@ export async function proxy(request: NextRequest) {
   // ---------------------------------------------------------------------------
   const isPublicChallenge = pathname.startsWith('/api/challenge') || pathname.startsWith('/api/session');
   const sessionIdRaw = request.cookies.get('__Host-session_id')?.value || request.cookies.get('session_id')?.value || 'no-session';
-  const compositeId = await hmacIdentifier(SECRET_KEY, isPublicChallenge ? `${ip}:${pathname}` : `${ip}:${ua}:${sessionIdRaw}`);
+  const compositeId = await hmacIdentifier(SECRET_KEY, isPublicChallenge? `${ip}:${pathname}` : `${ip}:${ua}:${sessionIdRaw}`);
 
   if (!getRateLimitConfigAndCheck(compositeId, pathname)) {
     logSecurityEvent('RATE_LIMIT_EXCEEDED', request, { pathname });
@@ -240,9 +266,9 @@ export async function proxy(request: NextRequest) {
   // ---------------------------------------------------------------------------
   // STEP 4: STATIC ASSETS & SHIELD VERIFY BYPASS
   // ---------------------------------------------------------------------------
-  const isStaticAsset = pathname.startsWith('/_next') || 
-                        pathname.startsWith('/images') || 
-                        pathname === '/favicon.ico' || 
+  const isStaticAsset = pathname.startsWith('/_next') ||
+                        pathname.startsWith('/images') ||
+                        pathname === '/favicon.ico' ||
                         pathname.match(/\.(png|jpg|jpeg|gif|webp|svg|ico|css|js|woff2?)$/i);
 
   if (pathname.startsWith(VERIFY_PATH) || isStaticAsset) {
@@ -301,7 +327,6 @@ export async function proxy(request: NextRequest) {
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set('x-nonce', nonce);
   requestHeaders.set('x-session-id', rawSessionId);
-  // FIX: Mengirim rawSessionId yang valid ke signInternalToken
   requestHeaders.set('x-internal-auth', await signInternalToken(rawSessionId, pathname));
 
   const response = NextResponse.next({ request: { headers: requestHeaders } });
@@ -325,6 +350,6 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|.*\\.(?:svg|png|jpg|jpeg|gif|webp|css|js)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt).*)',
   ],
 };
