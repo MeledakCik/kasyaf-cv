@@ -1,4 +1,4 @@
-// proxy.ts - FINAL v9.3 (Fixed for GSC Sitemap - Bypass SEO routes)
+// proxy.ts - FINAL v9.4 (GSC Fix - Only guard API & Shield)
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import {
@@ -28,7 +28,6 @@ const RATE_LIMIT_CONFIG: Record<string, { window: number; max: number }> = {
   '/api/challenge': { window: 60_000, max: 120 },
   '/api/session': { window: 60_000, max: 60 },
   '/api/': { window: 60_000, max: 80 },
-  '/': { window: 60_000, max: 150 },
 };
 
 function getRateLimitConfig(pathname: string) {
@@ -61,20 +60,13 @@ function getClientIp(req: NextRequest): string {
 function getRateLimitConfigAndCheck(compositeId: string, pathname: string): boolean {
   const now = Date.now();
   const config = getRateLimitConfig(pathname);
-
   if (rateLimitMap.size > 10000) rateLimitMap.clear();
-
   const entry = rateLimitMap.get(compositeId);
-
   if (!entry || now - entry.lastReset > config.window) {
     rateLimitMap.set(compositeId, { count: 1, lastReset: now, lastSeen: now });
     return true;
   }
-
-  if (now - entry.lastSeen < 10 && entry.count > 5) {
-    return false;
-  }
-
+  if (now - entry.lastSeen < 10 && entry.count > 5) return false;
   entry.count += 1;
   entry.lastSeen = now;
   return entry.count <= config.max;
@@ -82,36 +74,19 @@ function getRateLimitConfigAndCheck(compositeId: string, pathname: string): bool
 
 function isBot(req: NextRequest): boolean {
   const ua = (req.headers.get('user-agent') || '').toLowerCase();
-
-  // 1. Search Engine Bot Resmi - SELALU Lolos
-  if (['googlebot', 'bingbot', 'yandexbot', 'duckduckbot', 'google', 'adsbot', 'mediapartners'].some(b => ua.includes(b))) {
+  if (['googlebot', 'bingbot', 'yandexbot', 'duckduckbot', 'google', 'adsbot', 'mediapartners', 'apis-google', 'google-structured-data'].some(b => ua.includes(b))) {
     return false;
   }
-
-  // 2. UA Kosong / Terlalu Pendek
   if (!ua || ua.length < 8) return true;
-
-  // 3. Known Scrapers & CLI Tools
-  const knownScrapers = [
-    'curl', 'wget', 'python', 'urllib', 'postman', 'insomnia', 'axios', 'node-fetch',
-    'scrapy', 'httpclient', 'go-http-client', 'java', 'libwww-perl', 'zgrab'
-  ];
+  const knownScrapers = ['curl', 'wget', 'python', 'urllib', 'postman', 'insomnia', 'axios', 'node-fetch', 'scrapy', 'httpclient', 'go-http-client', 'java', 'libwww-perl', 'zgrab'];
   if (knownScrapers.some(bot => ua.includes(bot))) return true;
-
-  // 4. Headless Automation Tools
-  const headlessSignatures = [
-    'headlesschrome', 'phantomjs', 'selenium', 'puppeteer', 'playwright',
-    'rhino', 'electron', 'cypress', 'webdriver'
-  ];
+  const headlessSignatures = ['headlesschrome', 'phantomjs', 'selenium', 'puppeteer', 'playwright', 'rhino', 'electron', 'cypress', 'webdriver'];
   if (headlessSignatures.some(sig => ua.includes(sig))) return true;
-
-  // 5. Header Integrity Check
   const isRsc = req.headers.has('x-nextjs-data') || req.headers.get('accept')?.includes('text/x-component');
   if (!isRsc) {
     const hasAccept =!!req.headers.get('accept');
     if (!hasAccept) return true;
   }
-
   return false;
 }
 
@@ -135,31 +110,22 @@ function base64urlDecodeToJson(b64url: string): any {
 function buildCsp(nonce: string): string {
   const isDev = process.env.NODE_ENV!== 'production';
   const backendUrl = process.env.BACKEND_URL || 'https://melody-be-production.up.railway.app';
-
   const scriptSrc = isDev
-   ? `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' 'unsafe-eval' 'unsafe-inline' 'wasm-unsafe-eval' https://cdn.jsdelivr.net https://unpkg.com`
+  ? `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' 'unsafe-eval' 'unsafe-inline' 'wasm-unsafe-eval' https://cdn.jsdelivr.net https://unpkg.com`
     : `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' 'wasm-unsafe-eval' https://cdn.jsdelivr.net https://unpkg.com`;
-
   return [
-    `base-uri 'self'`,
-    `default-src 'self'`,
-    scriptSrc,
+    `base-uri 'self'`, `default-src 'self'`, scriptSrc,
     `style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net https://unpkg.com`,
     `font-src 'self' data: https://fonts.gstatic.com https://cdn.jsdelivr.net https://unpkg.com`,
     `img-src 'self' data: blob: https:`,
     `connect-src 'self' ${backendUrl} https://kasyaf-ai-agent.my.id https://www.kasyaf-ai-agent.my.id https://*.githack.com https://*.githubusercontent.com https://api.groq.com https://cdn.jsdelivr.net https://unpkg.com https://lottie.host https://*.lottiefiles.com wss://*.sylvorlabs.com wss://${backendUrl.replace('https://', '')} ws://localhost:* wss://localhost:* http://localhost:* https://unpkg.com`,
-    `media-src 'self' ${backendUrl} blob:`,
-    `object-src 'none'`,
-    `frame-ancestors 'none'`,
-    `form-action 'self'`,
-    `worker-src 'self' blob: https://cdn.jsdelivr.net https://unpkg.com`,
+    `media-src 'self' ${backendUrl} blob:`, `object-src 'none'`, `frame-ancestors 'none'`, `form-action 'self'`, `worker-src 'self' blob: https://cdn.jsdelivr.net https://unpkg.com`,
   ].join('; ');
 }
 
 function setSecurityHeaders(res: NextResponse, nonce: string, pathname: string = '') {
   res.headers.delete('x-powered-by');
   const isImage = pathname.startsWith('/_next/image') || pathname.match(/\.(png|jpg|webp|svg|woff2?)$/);
-
   res.headers.set('Content-Security-Policy', buildCsp(nonce));
   res.headers.set('X-Content-Type-Options', 'nosniff');
   res.headers.set('X-Frame-Options', 'DENY');
@@ -167,51 +133,25 @@ function setSecurityHeaders(res: NextResponse, nonce: string, pathname: string =
   res.headers.set('Cross-Origin-Resource-Policy', isImage? 'cross-origin' : 'same-site');
   res.headers.set('Cross-Origin-Opener-Policy', 'same-origin');
   res.headers.set('X-Cik-Guard', 'active');
-
   if (process.env.NODE_ENV === 'production') {
     res.headers.set('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload');
   }
 }
 
 export async function proxy(request: NextRequest) {
-  const nonce = generateNonce();
   const { pathname } = request.nextUrl;
 
-  // ===========================================================================
-  // STEP -1: SEO & STATIC BYPASS (WAJIB PALING ATAS - FIX GSC ERROR)
-  // ===========================================================================
-  const SEO_BYPASS_PATHS = [
-    '/sitemap.xml',
-    '/robots.txt',
-    '/favicon.ico',
-    '/manifest.json',
-  ];
-
-  if (
-    SEO_BYPASS_PATHS.includes(pathname) ||
-    pathname.startsWith('/_next/static') ||
-    pathname.startsWith('/_next/image') ||
-    pathname.startsWith('/images/')
-  ) {
-    const reqHeaders = new Headers(request.headers);
-    reqHeaders.set('x-nonce', nonce);
-    const res = NextResponse.next({ request: { headers: reqHeaders } });
-    // Kasih header khusus biar tau ke-bypass
-    res.headers.set('X-Cik-Guard', 'bypass-seo');
-    if (pathname === '/sitemap.xml') {
-      res.headers.set('Content-Type', 'application/xml');
-    }
-    return res;
+  // BYPASS SEO - HARUS PALING ATAS, SEBELUM NONCE
+  if (pathname === '/sitemap.xml' || pathname === '/robots.txt' || pathname === '/favicon.ico') {
+    return NextResponse.next();
   }
 
+  const nonce = generateNonce();
   const ua = request.headers.get('user-agent') || '';
   const ip = getClientIp(request);
   const SECRET_KEY = process.env.COOKIE_SECRET || 'default-fallback-secret-key-32chars';
   const isProd = process.env.NODE_ENV === 'production';
 
-  // ---------------------------------------------------------------------------
-  // STEP 0: ORIGIN GUARD (CSRF PREVENTION FOR MUTATING REQUESTS)
-  // ---------------------------------------------------------------------------
   const originErrorResponse = validateOrigin(request);
   if (originErrorResponse) {
     logSecurityEvent('ORIGIN_CSRF_BLOCKED', request, { pathname });
@@ -219,7 +159,6 @@ export async function proxy(request: NextRequest) {
     return originErrorResponse;
   }
 
-  // Cleanup Rate Limit Cache
   if (Date.now() - lastCleanup > 60_000) {
     for (const [k, v] of rateLimitMap) {
       if (Date.now() - v.lastSeen > 5 * 60_000) rateLimitMap.delete(k);
@@ -227,9 +166,6 @@ export async function proxy(request: NextRequest) {
     lastCleanup = Date.now();
   }
 
-  // ---------------------------------------------------------------------------
-  // STEP 1: ANTI-BOT & CRAWLER CHECK
-  // ---------------------------------------------------------------------------
   if (isBot(request)) {
     logSecurityEvent('BOT_CRAWLER_BLOCKED', request, { pathname });
     const res = new NextResponse('Access Denied', { status: 403 });
@@ -237,9 +173,6 @@ export async function proxy(request: NextRequest) {
     return res;
   }
 
-  // ---------------------------------------------------------------------------
-  // STEP 2: RATE LIMITING CHECK
-  // ---------------------------------------------------------------------------
   const isPublicChallenge = pathname.startsWith('/api/challenge') || pathname.startsWith('/api/session');
   const sessionIdRaw = request.cookies.get('__Host-session_id')?.value || request.cookies.get('session_id')?.value || 'no-session';
   const compositeId = await hmacIdentifier(SECRET_KEY, isPublicChallenge? `${ip}:${pathname}` : `${ip}:${ua}:${sessionIdRaw}`);
@@ -251,9 +184,6 @@ export async function proxy(request: NextRequest) {
     return res;
   }
 
-  // ---------------------------------------------------------------------------
-  // STEP 3: PUBLIC API BYPASS
-  // ---------------------------------------------------------------------------
   const isPublicApi = PUBLIC_API_PREFIXES.some(p => pathname.startsWith(p));
   if (isPublicApi) {
     const reqHeaders = new Headers(request.headers);
@@ -263,14 +193,7 @@ export async function proxy(request: NextRequest) {
     return res;
   }
 
-  // ---------------------------------------------------------------------------
-  // STEP 4: STATIC ASSETS & SHIELD VERIFY BYPASS
-  // ---------------------------------------------------------------------------
-  const isStaticAsset = pathname.startsWith('/_next') ||
-                        pathname.startsWith('/images') ||
-                        pathname === '/favicon.ico' ||
-                        pathname.match(/\.(png|jpg|jpeg|gif|webp|svg|ico|css|js|woff2?)$/i);
-
+  const isStaticAsset = pathname.startsWith('/_next') || pathname.startsWith('/images') || pathname === '/favicon.ico' || pathname.match(/\.(png|jpg|jpeg|gif|webp|svg|ico|css|js|woff2?)$/i);
   if (pathname.startsWith(VERIFY_PATH) || isStaticAsset) {
     const reqHeaders = new Headers(request.headers);
     reqHeaders.set('x-nonce', nonce);
@@ -279,37 +202,27 @@ export async function proxy(request: NextRequest) {
     return res;
   }
 
-  // ---------------------------------------------------------------------------
-  // STEP 5: PROTECTED API ENDPOINTS
-  // ---------------------------------------------------------------------------
   if (pathname.startsWith(API_PATH)) {
     const sessionId = request.cookies.get('__Host-session_id')?.value || request.cookies.get('session_id')?.value;
     const deviceId = request.cookies.get('__Host-device_id')?.value || request.cookies.get('device_id')?.value;
     const verifiedSid = await verifySessionWithDevice(sessionId, deviceId, ua);
-
     if (!verifiedSid) {
       const res = new NextResponse('Unauthorized', { status: 401 });
       setSecurityHeaders(res, nonce, pathname);
       return res;
     }
-
     const headers = new Headers(request.headers);
     headers.set('x-nonce', nonce);
     headers.set('x-session-id', verifiedSid);
     headers.set('x-internal-auth', await signInternalToken(verifiedSid, pathname));
-
     const res = NextResponse.next({ request: { headers } });
     setSecurityHeaders(res, nonce, pathname);
     return res;
   }
 
-  // ---------------------------------------------------------------------------
-  // STEP 6: PAGE AUTHENTICATION FLOW
-  // ---------------------------------------------------------------------------
   const deviceId = request.cookies.get('__Host-device_id')?.value || request.cookies.get('device_id')?.value;
   const sessionId = request.cookies.get('__Host-session_id')?.value || request.cookies.get('session_id')?.value;
   const rawSessionId = await verifySessionWithDevice(sessionId, deviceId, ua);
-
   if (!rawSessionId) {
     logSecurityEvent('PAGE_NO_SESSION_REDIRECT', request, { pathname });
     const response = NextResponse.redirect(new URL(VERIFY_PATH, request.url));
@@ -328,14 +241,11 @@ export async function proxy(request: NextRequest) {
   requestHeaders.set('x-nonce', nonce);
   requestHeaders.set('x-session-id', rawSessionId);
   requestHeaders.set('x-internal-auth', await signInternalToken(rawSessionId, pathname));
-
   const response = NextResponse.next({ request: { headers: requestHeaders } });
 
-  // Session Rotation
   if (Date.now() - issuedAt > SESSION_ROTATE_AFTER_MS) {
     const newRaw = crypto.randomUUID().replace(/-/g, '');
     const newSigned = await signSessionWithDevice(newRaw, deviceId || '', ua);
-
     if (isProd) {
       response.cookies.set('__Host-session_id', newSigned, { path: '/', sameSite: 'strict', secure: true, httpOnly: true, maxAge: SESSION_MAX_AGE });
       response.cookies.delete('session_id');
@@ -347,10 +257,11 @@ export async function proxy(request: NextRequest) {
   setSecurityHeaders(response, nonce, pathname);
   return response;
 }
+
+// FIX UTAMA: JANGAN PAKAI REGEX NEGATIVE LOOKAHEAD DI PROXY.TS CANARY
 export const config = {
   matcher: [
     '/api/:path*',
     '/v2/:path*',
-    '/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|manifest.json|images).*)',
   ],
 };
