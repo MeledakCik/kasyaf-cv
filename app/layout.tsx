@@ -34,6 +34,9 @@ export const metadata: Metadata = {
     "Portofolio Muhammad Kasyaf Anugrah, Full Stack Developer yang fokus di front end, back end, dan cyber security. Lihat proyek, pengalaman, dan keahlian teknis di sini.",
   keywords: [
     "Muhammad Kasyaf Anugrah",
+    "Muhammad Kasyaf",
+    "muhammad kasyaf",
+    "kasyaf cyber security",
     "kasyaf cv",
     "kasyaf portfolio",
     "full stack developer indonesia",
