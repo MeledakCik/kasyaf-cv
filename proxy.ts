@@ -258,7 +258,6 @@ export async function proxy(request: NextRequest) {
   return response;
 }
 
-// FIX UTAMA: JANGAN PAKAI REGEX NEGATIVE LOOKAHEAD DI PROXY.TS CANARY
 export const config = {
   matcher: [
     '/api/:path*',

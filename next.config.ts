@@ -50,16 +50,36 @@ const nextConfig: NextConfig = {
     return config;
   },
 
-  async headers() {
+    async headers() {
     return [
+      // 1. BYPASS KHUSUS SEO - HARUS PALING ATAS!
       {
-        source: "/(.*)",
+        source: "/sitemap.xml",
         headers: [
-          // --- HEADER SIGNATURE WAF FOR SCANNER (Membuat status GUARDED) ---
+          { key: "Content-Type", value: "application/xml" },
+          { key: "Cache-Control", value: "public, max-age=0, must-revalidate" },
+        ],
+      },
+      {
+        source: "/robots.txt",
+        headers: [
+          { key: "Content-Type", value: "text/plain" },
+        ],
+      },
+      {
+        source: "/favicon.ico",
+        headers: [
+          { key: "Cache-Control", value: "public, max-age=31536000, immutable" },
+        ],
+      },
+      // 2. BARU WAF UNTUK SISANYA
+      {
+        source: "/((?!sitemap.xml|robots.txt|favicon.ico|_next/static|_next/image).*)",
+        headers: [
+          // --- HEADER SIGNATURE WAF ---
           { key: "X-Cik-Guard", value: "active" },
           { key: "X-Protected-By", value: "Vercel-Custom-WAF" },
           { key: "X-WAF-Event-ID", value: "guard-enabled" },
-          { key: "Server", value: "Shield-Guard/v7.0" }, // Mencoba menimpa default Server header
 
           // --- HEADER KEAMANAN STANDAR ---
           { key: "X-Content-Type-Options", value: "nosniff" },
@@ -72,8 +92,7 @@ const nextConfig: NextConfig = {
           },
           {
             key: "Permissions-Policy",
-            value:
-              "camera=(), microphone=(), geolocation=(), payment=(), usb=(), magnetometer=(), gyroscope=()",
+            value: "camera=(), microphone=(), geolocation=(), payment=(), usb=(), magnetometer=(), gyroscope=()",
           },
           {
             key: "Strict-Transport-Security",
@@ -96,8 +115,7 @@ const nextConfig: NextConfig = {
           },
           {
             key: "Access-Control-Allow-Headers",
-            value:
-              "Content-Type, Authorization, X-Session-Id, X-Internal-Auth, X-Nonce",
+            value: "Content-Type, Authorization, X-Session-Id, X-Internal-Auth, X-Nonce",
           },
         ],
       },
