@@ -347,9 +347,10 @@ export async function proxy(request: NextRequest) {
   setSecurityHeaders(response, nonce, pathname);
   return response;
 }
-
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt).*)',
+    '/api/:path*',
+    '/v2/:path*',
+    '/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|manifest.json|images).*)',
   ],
 };
