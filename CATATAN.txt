@@ -1,0 +1,24 @@
+Update: 11 produk kamu + auto-screenshot (tanpa upload gambar manual)
+
+File yang perlu ditimpa:
+1. lib/products-data.ts   -> isi 11 produk kamu (title, deskripsi, link)
+2. next.config.ts         -> ditambah domain "s.wordpress.com" & "s0.wp.com"
+                              di images.remotePatterns (WAJIB biar Next/Image
+                              boleh load screenshot otomatis)
+
+Cara kerja gambar:
+- Setiap card pakai screenshot otomatis dari layanan WordPress mshots,
+  jadi kamu GAK PERLU screenshot manual satu-satu.
+- Screenshot pertama kali agak "kabur/placeholder" karena mshots baru
+  nge-render pertama kali diakses, tapi setelah beberapa saat auto refresh
+  jadi gambar asli tampilan situsnya (biasanya update dalam beberapa menit-jam).
+
+Yang perlu kamu cek/edit manual di lib/products-data.ts:
+- "ciklabs", "sylvor-labs", "cikawan-gb", "ramadhan-sahur" -> deskripsinya
+  masih generik karena situsnya nggak bisa aku crawl (proteksi/nggak keindex).
+  Ganti description sesuai produk aslinya.
+- "report-phising" -> link ini sempat 404 saat dicek, pastikan masih aktif.
+
+Kalau nanti mau ganti gambar jadi manual (bukan auto-screenshot):
+1. Taruh file gambar di public/images/products/nama-file.png
+2. Ganti value `image` di products-data.ts jadi "/images/products/nama-file.png"

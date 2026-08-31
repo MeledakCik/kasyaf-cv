@@ -23,6 +23,14 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "**.cloudinary.com",
       },
+      {
+        protocol: "https",
+        hostname: "s0.wp.com",
+      },
+      {
+        protocol: "https",
+        hostname: "s.wordpress.com",
+      },
     ],
   },
 
