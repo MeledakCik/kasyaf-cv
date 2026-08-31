@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { Poppins } from "next/font/google";
 import { AnimatePresence, motion } from "framer-motion";
-import { TEMPLATE_CATEGORIES } from "@/lib/templates-data";
+import { PRODUCT_CATEGORIES } from "@/lib/products-data";
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -18,7 +18,6 @@ export default function DashboardLayout({
 }) {
   const router = useRouter();
   const pathname = usePathname();
-  const isGalaxy = pathname === "/template/GalaxyStarField";
 
   const [isTemplatesOpen, setIsTemplatesOpen] = useState(true);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -34,7 +33,7 @@ export default function DashboardLayout({
     >
       <header className="lg:hidden fixed top-0 left-0 right-0 z-40 flex items-center justify-between px-4 py-3 bg-[#0d1326]/90 backdrop-blur-xl border-b border-white/10">
         <div onClick={() => goTo("/template")} className="cursor-pointer">
-          <h1 className="text-lg font-black text-blue-500">TEMPLATE</h1>
+          <h1 className="text-lg font-black text-blue-500">MY PRODUCT</h1>
         </div>
 
         <button
@@ -72,7 +71,7 @@ export default function DashboardLayout({
                   onClick={() => goTo("/template")}
                   className="text-2xl font-black text-blue-500 cursor-pointer"
                 >
-                  TEMPLATE
+                  MY PRODUCT
                 </h1>
                 <button
                   onClick={() => setIsMobileMenuOpen(false)}
@@ -107,7 +106,7 @@ export default function DashboardLayout({
               onClick={() => router.push("/template")}
               className="cursor-pointer mb-10"
             >
-              <h1 className="text-2xl font-black text-blue-500">TEMPLATE</h1>
+              <h1 className="text-2xl font-black text-blue-500">MY PRODUCT</h1>
             </div>
 
             <SidebarNav
@@ -118,11 +117,7 @@ export default function DashboardLayout({
             />
           </aside>
 
-          <main
-            className={`flex-1 h-full overflow-y-auto pt-16 lg:pt-0 ${
-              isGalaxy ? "p-0 lg:p-0" : "lg:ml-72 p-4 sm:p-6 lg:p-8"
-            }`}
-          >
+          <main className="flex-1 h-full overflow-y-auto pt-16 lg:pt-0 lg:ml-72 p-4 sm:p-6 lg:p-8">
             {children}
           </main>
         </motion.div>
@@ -156,7 +151,7 @@ function SidebarNav({
           onClick={() => setIsTemplatesOpen(!isTemplatesOpen)}
           className="px-5 py-3 rounded-lg cursor-pointer flex justify-between text-white/70 hover:bg-white/5"
         >
-          Templates
+          Products
           <span className={`transition ${isTemplatesOpen ? "rotate-180" : ""}`}>
             ▼
           </span>
@@ -171,7 +166,7 @@ function SidebarNav({
               All
             </div>
 
-            {TEMPLATE_CATEGORIES.map((cat) => (
+            {PRODUCT_CATEGORIES.map((cat) => (
               <div
                 key={cat}
                 onClick={() => onNavigate(`/template?category=${cat}`)}

@@ -1,10 +1,10 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { TiltCard } from "@/components/function/TiltCard";
-import { TEMPLATE_CATEGORIES, TEMPLATES } from "@/lib/templates-data";
+import { ProductCard } from "@/components/function/ProductCard";
+import { PRODUCT_CATEGORIES, PRODUCTS } from "@/lib/products-data";
 
-const FILTERS = ["All", ...TEMPLATE_CATEGORIES];
+const FILTERS = ["All", ...PRODUCT_CATEGORIES];
 
 export default function TemplateClient({
   initialCategory,
@@ -25,11 +25,11 @@ export default function TemplateClient({
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 sm:mb-10 gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-black text-white">
-            Template Koleksi
+            My Product
           </h1>
 
           <p className="text-sm sm:text-base text-white/40 font-medium">
-            Pilih gaya yang sesuai untuk proyek Anda
+            Kumpulan produk yang sudah saya buat
           </p>
         </div>
 
@@ -51,11 +51,11 @@ export default function TemplateClient({
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-        {TEMPLATES.filter(
-          (t) => activeCategory === "All" || t.category === activeCategory,
-        ).map((tpl) => (
-          <div key={tpl.id} className="group">
-            <TiltCard card={tpl} onClick={() => router.push(tpl.path)} />
+        {PRODUCTS.filter(
+          (p) => activeCategory === "All" || p.category === activeCategory,
+        ).map((product) => (
+          <div key={product.id} className="group">
+            <ProductCard product={product} />
           </div>
         ))}
       </div>

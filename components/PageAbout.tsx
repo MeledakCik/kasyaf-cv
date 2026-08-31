@@ -56,7 +56,7 @@ const ExperienceIcon = () => (
 
 const CARDS = [
   { id: "aboutme", title: "About Me", icon: <AboutIcon /> },
-  { id: "templates", title: "Templates", icon: <TemplatesIcon /> },
+  { id: "templates", title: "My Product", icon: <TemplatesIcon /> },
   { id: "experience", title: "Experience", icon: <ExperienceIcon /> },
 ];
 

@@ -316,6 +316,8 @@ export default function AIBrain() {
       const routeMaps: Record<string, string> = {
         template: "/template",
         koleksi: "/template",
+        produk: "/template",
+        product: "/template",
         project: "/project",
         proyek: "/project",
       };

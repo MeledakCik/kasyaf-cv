@@ -1,0 +1,15 @@
+File/folder di bawah ini sudah tidak dipakai lagi setelah update "My Product".
+Hapus manual di project kamu:
+
+1. lib/templates-data.ts
+2. app/template/GalaxyStarField/          (seluruh folder)
+3. app/template/Text3D/                   (seluruh folder)
+4. components/Templates/                  (seluruh folder)
+5. public/images/galaxy-preview.png
+6. public/images/text3d-preview.png
+
+Command cepat (jalankan dari root project):
+rm -f lib/templates-data.ts
+rm -rf app/template/GalaxyStarField app/template/Text3D
+rm -rf components/Templates
+rm -f public/images/galaxy-preview.png public/images/text3d-preview.png
