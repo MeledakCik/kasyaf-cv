@@ -1,4 +1,4 @@
-// proxy.ts - FINAL v9.4 (GSC Fix - Only guard API & Shield)
+// proxy.ts - FIXED v9.5 (Root Matcher & Auto Session Issuance)
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import {
@@ -84,7 +84,7 @@ function isBot(req: NextRequest): boolean {
   if (headlessSignatures.some(sig => ua.includes(sig))) return true;
   const isRsc = req.headers.has('x-nextjs-data') || req.headers.get('accept')?.includes('text/x-component');
   if (!isRsc) {
-    const hasAccept =!!req.headers.get('accept');
+    const hasAccept = !!req.headers.get('accept');
     if (!hasAccept) return true;
   }
   return false;
@@ -108,10 +108,10 @@ function base64urlDecodeToJson(b64url: string): any {
 }
 
 function buildCsp(nonce: string): string {
-  const isDev = process.env.NODE_ENV!== 'production';
+  const isDev = process.env.NODE_ENV !== 'production';
   const backendUrl = process.env.BACKEND_URL || 'https://melody-be-production.up.railway.app';
   const scriptSrc = isDev
-  ? `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' 'unsafe-eval' 'unsafe-inline' 'wasm-unsafe-eval' https://cdn.jsdelivr.net https://unpkg.com`
+    ? `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' 'unsafe-eval' 'unsafe-inline' 'wasm-unsafe-eval' https://cdn.jsdelivr.net https://unpkg.com`
     : `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' 'wasm-unsafe-eval' https://cdn.jsdelivr.net https://unpkg.com`;
   return [
     `base-uri 'self'`, `default-src 'self'`, scriptSrc,
@@ -129,8 +129,8 @@ function setSecurityHeaders(res: NextResponse, nonce: string, pathname: string =
   res.headers.set('Content-Security-Policy', buildCsp(nonce));
   res.headers.set('X-Content-Type-Options', 'nosniff');
   res.headers.set('X-Frame-Options', 'DENY');
-  res.headers.set('Cross-Origin-Embedder-Policy', isImage? 'unsafe-none' : 'credentialless');
-  res.headers.set('Cross-Origin-Resource-Policy', isImage? 'cross-origin' : 'same-site');
+  res.headers.set('Cross-Origin-Embedder-Policy', isImage ? 'unsafe-none' : 'credentialless');
+  res.headers.set('Cross-Origin-Resource-Policy', isImage ? 'cross-origin' : 'same-site');
   res.headers.set('Cross-Origin-Opener-Policy', 'same-origin');
   res.headers.set('X-Cik-Guard', 'active');
   if (process.env.NODE_ENV === 'production') {
@@ -141,7 +141,7 @@ function setSecurityHeaders(res: NextResponse, nonce: string, pathname: string =
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // BYPASS SEO - HARUS PALING ATAS, SEBELUM NONCE
+  // BYPASS SEO
   if (pathname === '/sitemap.xml' || pathname === '/robots.txt' || pathname === '/favicon.ico') {
     return NextResponse.next();
   }
@@ -166,6 +166,7 @@ export async function proxy(request: NextRequest) {
     lastCleanup = Date.now();
   }
 
+  // FIX 1: kembalikan JSON untuk penolakan Bot
   if (isBot(request)) {
     logSecurityEvent('BOT_CRAWLER_BLOCKED', request, { pathname });
     const res = NextResponse.json({ error: 'Access Denied' }, { status: 403 });
@@ -175,11 +176,11 @@ export async function proxy(request: NextRequest) {
 
   const isPublicChallenge = pathname.startsWith('/api/challenge') || pathname.startsWith('/api/session');
   const sessionIdRaw = request.cookies.get('__Host-session_id')?.value || request.cookies.get('session_id')?.value || 'no-session';
-  const compositeId = await hmacIdentifier(SECRET_KEY, isPublicChallenge? `${ip}:${pathname}` : `${ip}:${ua}:${sessionIdRaw}`);
+  const compositeId = await hmacIdentifier(SECRET_KEY, isPublicChallenge ? `${ip}:${pathname}` : `${ip}:${ua}:${sessionIdRaw}`);
 
   if (!getRateLimitConfigAndCheck(compositeId, pathname)) {
     logSecurityEvent('RATE_LIMIT_EXCEEDED', request, { pathname });
-    const res = new NextResponse('Too Many Requests', { status: 429 });
+    const res = NextResponse.json({ error: 'Too Many Requests' }, { status: 429 });
     setSecurityHeaders(res, nonce, pathname);
     return res;
   }
@@ -202,10 +203,13 @@ export async function proxy(request: NextRequest) {
     return res;
   }
 
+  // Pengecekan Endpoint API
   if (pathname.startsWith(API_PATH)) {
     const sessionId = request.cookies.get('__Host-session_id')?.value || request.cookies.get('session_id')?.value;
     const deviceId = request.cookies.get('__Host-device_id')?.value || request.cookies.get('device_id')?.value;
     const verifiedSid = await verifySessionWithDevice(sessionId, deviceId, ua);
+
+    // FIX 2: kembalikan JSON jika Unauthorized
     if (!verifiedSid) {
       const res = NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
       setSecurityHeaders(res, nonce, pathname);
@@ -220,37 +224,61 @@ export async function proxy(request: NextRequest) {
     return res;
   }
 
+  // Pengecekan Halaman Biasa (Landing Page)
   const deviceId = request.cookies.get('__Host-device_id')?.value || request.cookies.get('device_id')?.value;
   const sessionId = request.cookies.get('__Host-session_id')?.value || request.cookies.get('session_id')?.value;
-  const rawSessionId = await verifySessionWithDevice(sessionId, deviceId, ua);
-  if (!rawSessionId) {
-    logSecurityEvent('PAGE_NO_SESSION_REDIRECT', request, { pathname });
-    const response = NextResponse.redirect(new URL(VERIFY_PATH, request.url));
-    ['session_id', 'device_id', '__Host-session_id', '__Host-device_id'].forEach(c => response.cookies.delete(c));
-    setSecurityHeaders(response, nonce, pathname);
-    return response;
-  }
-
-  let issuedAt = 0;
-  if (sessionId) {
-    const payload = base64urlDecodeToJson(sessionId.split('.')[0]);
-    if (payload?.iat) issuedAt = payload.iat;
-  }
+  let rawSessionId = await verifySessionWithDevice(sessionId, deviceId, ua);
 
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set('x-nonce', nonce);
-  requestHeaders.set('x-session-id', rawSessionId);
-  requestHeaders.set('x-internal-auth', await signInternalToken(rawSessionId, pathname));
-  const response = NextResponse.next({ request: { headers: requestHeaders } });
 
-  if (Date.now() - issuedAt > SESSION_ROTATE_AFTER_MS) {
-    const newRaw = crypto.randomUUID().replace(/-/g, '');
-    const newSigned = await signSessionWithDevice(newRaw, deviceId || '', ua);
+  // FIX 3: Auto-issue session jika belum ada, daripada langsung menendang visitor ke VERIFY_PATH
+  let response: NextResponse;
+  if (!rawSessionId) {
+    const newRawSid = crypto.randomUUID().replace(/-/g, '');
+    const newDeviceId = deviceId || crypto.randomUUID().replace(/-/g, '');
+    const newSignedSession = await signSessionWithDevice(newRawSid, newDeviceId, ua);
+
+    rawSessionId = newRawSid;
+    requestHeaders.set('x-session-id', rawSessionId);
+    requestHeaders.set('x-internal-auth', await signInternalToken(rawSessionId, pathname));
+    response = NextResponse.next({ request: { headers: requestHeaders } });
+
+    const cookieOptions = {
+      path: '/',
+      sameSite: 'strict' as const,
+      httpOnly: true,
+      maxAge: SESSION_MAX_AGE,
+      secure: isProd,
+    };
+
     if (isProd) {
-      response.cookies.set('__Host-session_id', newSigned, { path: '/', sameSite: 'strict', secure: true, httpOnly: true, maxAge: SESSION_MAX_AGE });
-      response.cookies.delete('session_id');
+      response.cookies.set('__Host-session_id', newSignedSession, cookieOptions);
+      response.cookies.set('__Host-device_id', newDeviceId, cookieOptions);
     } else {
-      response.cookies.set('session_id', newSigned, { path: '/', sameSite: 'strict', secure: false, httpOnly: true, maxAge: SESSION_MAX_AGE });
+      response.cookies.set('session_id', newSignedSession, cookieOptions);
+      response.cookies.set('device_id', newDeviceId, cookieOptions);
+    }
+  } else {
+    let issuedAt = 0;
+    if (sessionId) {
+      const payload = base64urlDecodeToJson(sessionId.split('.')[0]);
+      if (payload?.iat) issuedAt = payload.iat;
+    }
+
+    requestHeaders.set('x-session-id', rawSessionId);
+    requestHeaders.set('x-internal-auth', await signInternalToken(rawSessionId, pathname));
+    response = NextResponse.next({ request: { headers: requestHeaders } });
+
+    if (Date.now() - issuedAt > SESSION_ROTATE_AFTER_MS) {
+      const newRaw = crypto.randomUUID().replace(/-/g, '');
+      const newSigned = await signSessionWithDevice(newRaw, deviceId || '', ua);
+      if (isProd) {
+        response.cookies.set('__Host-session_id', newSigned, { path: '/', sameSite: 'strict', secure: true, httpOnly: true, maxAge: SESSION_MAX_AGE });
+        response.cookies.delete('session_id');
+      } else {
+        response.cookies.set('session_id', newSigned, { path: '/', sameSite: 'strict', secure: false, httpOnly: true, maxAge: SESSION_MAX_AGE });
+      }
     }
   }
 
@@ -258,9 +286,10 @@ export async function proxy(request: NextRequest) {
   return response;
 }
 
+// FIX 4: Perluas matcher agar menangkap Halaman Utama & API
 export const config = {
   matcher: [
-    '/api/:path*',
-    '/v2/:path*',
+    '/',
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 };
