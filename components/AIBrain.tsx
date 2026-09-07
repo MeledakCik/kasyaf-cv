@@ -376,55 +376,74 @@ export default function AIBrain() {
   );
 
   const handleSubmit = useCallback(
-    async (e: React.FormEvent) => {
-      e.preventDefault();
-      const rawQuery = input.trim();
-      if (!rawQuery || isGenerating) return;
-      const query = rawQuery.slice(0, 2000);
-      setInput("");
-      const detectedSection = autoNavigateToSection(query);
-      setMessages((prev) => [...prev, { role: "user", content: query }]);
-      setIsGenerating(true);
-      setErrorMsg(null);
+  async (e: React.FormEvent) => {
+    e.preventDefault();
+    const rawQuery = input.trim();
+    if (!rawQuery || isGenerating) return;
+    const query = rawQuery.slice(0, 2000);
+    setInput("");
+    const detectedSection = autoNavigateToSection(query);
+    setMessages((prev) => [...prev, { role: "user", content: query }]);
+    setIsGenerating(true);
+    setErrorMsg(null);
 
-      try {
-        const response = await fetch("/api/chat-ai", {
-          method: "POST",
-          headers: { "Content-Type": "application/json","Accept": "application/json, text/plain, */*" },
-          body: JSON.stringify({
-            message: query,
-            detectedSection,
-            _ts: Date.now(),
-            _nonce: crypto.randomUUID(),
-          }),
-        });
+    try {
+      const response = await fetch("/api/chat-ai", {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json",
+          "Accept": "application/json, text/plain, */*" // FIX 1: Lolos dari isBot()
+        },
+        body: JSON.stringify({
+          message: query,
+          detectedSection,
+          _ts: Date.now(),
+          _nonce: crypto.randomUUID(),
+        }),
+      });
 
-        if (!response.ok) throw new Error((await response.json()).error || "Gagal");
-        setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
-        const reader = response.body!.getReader();
-        const decoder = new TextDecoder();
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          const chunk = decoder.decode(value);
-          setMessages((prev) => {
-            const last = prev[prev.length - 1];
-            const updated = [...prev];
-            updated[updated.length - 1] = {
-              ...last,
-              content: last.content + chunk,
-            };
-            return updated;
-          });
+      // FIX 2: Parsing error aman tanpa bikin SyntaxError JSON
+      if (!response.ok) {
+        const errorText = await response.text();
+        let errorMessage = errorText;
+        try {
+          const errorJson = JSON.parse(errorText);
+          errorMessage = errorJson.error || errorText;
+        } catch {
+          // Tetap gunakan errorText jika bukan JSON
         }
-      } catch (err: unknown) {
-        setErrorMsg(err instanceof Error ? err.message : "Terjadi kesalahan");
-      } finally {
-        setIsGenerating(false);
+        
+        if (response.status === 401) throw new Error("Sesi kadaluarsa / Unauthorized. Silakan refresh halaman.");
+        if (response.status === 403) throw new Error("Akses ditolak oleh Security Shield (Bot Detected).");
+        throw new Error(errorMessage || `Error ${response.status}`);
       }
-    },
-    [input, isGenerating, autoNavigateToSection],
-  );
+
+      setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
+      const reader = response.body!.getReader();
+      const decoder = new TextDecoder();
+      
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const chunk = decoder.decode(value);
+        setMessages((prev) => {
+          const last = prev[prev.length - 1];
+          const updated = [...prev];
+          updated[updated.length - 1] = {
+            ...last,
+            content: last.content + chunk,
+          };
+          return updated;
+        });
+      }
+    } catch (err: unknown) {
+      setErrorMsg(err instanceof Error ? err.message : "Terjadi kesalahan");
+    } finally {
+      setIsGenerating(false);
+    }
+  },
+  [input, isGenerating, autoNavigateToSection],
+);
 
   const highlightKeywords = (text: string) => {
     let allKeywords = [...PORTFOLIO_KEYS];
