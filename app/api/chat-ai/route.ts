@@ -135,8 +135,6 @@ export async function POST(request: NextRequest) {
     const timeoutId = setTimeout(() => controller.abort(), GROQ_TIMEOUT_MS);
 
     // Gunakan model yang lebih stabil & cepat jika 70b bermasalah
-    const GROQ_MODEL = process.env.GROQ_MODEL || "llama-3.1-8b-instant";
-
     const groqResponse = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -144,7 +142,7 @@ export async function POST(request: NextRequest) {
         Authorization: `Bearer ${apiKey}`
       },
       body: JSON.stringify({
-        model: GROQ_MODEL,
+        model: "llama-3.1-8b-instant", // FIX 404: Menggunakan model ID yang valid
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: sanitizedMessage }
