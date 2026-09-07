@@ -134,6 +134,9 @@ export async function POST(request: NextRequest) {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), GROQ_TIMEOUT_MS);
 
+    // Gunakan model yang lebih stabil & cepat jika 70b bermasalah
+    const GROQ_MODEL = process.env.GROQ_MODEL || "llama-3.1-8b-instant";
+
     const groqResponse = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -141,7 +144,7 @@ export async function POST(request: NextRequest) {
         Authorization: `Bearer ${apiKey}`
       },
       body: JSON.stringify({
-        model: "llama-3.3-70b-versatile",
+        model: GROQ_MODEL,
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: sanitizedMessage }
@@ -156,7 +159,8 @@ export async function POST(request: NextRequest) {
 
     if (!groqResponse.ok || !groqResponse.body) {
       const errText = await groqResponse.text().catch(() => '');
-      console.error("[GROQ_FETCH_ERROR]", groqResponse.status, errText);
+      // Log ini akan menampilkan alasan pasti dari Groq di Vercel Logs
+      console.error(`[GROQ_ERROR_DETAILS] Status: ${groqResponse.status} | Body: ${errText}`);
       return jsonWithSecurity({ error: "AI service error" }, { status: 502 });
     }
 
