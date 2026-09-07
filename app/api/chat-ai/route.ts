@@ -1,4 +1,4 @@
-// app/api/chat-ai/route.ts - FIX v7.1
+// app/api/chat-ai/route.ts - FIX v7.2 (Stream & Guardrail Compatibility)
 import { NextRequest, NextResponse } from "next/server";
 import { verifyInternalToken } from "@/lib/auth";
 
@@ -6,7 +6,6 @@ const MAX_MESSAGE_LENGTH = 2000;
 const GROQ_TIMEOUT_MS = 15000;
 const RATE_LIMIT_MAX = parseInt(process.env.RATE_LIMIT_MAX || '20');
 const RATE_LIMIT_WINDOW_MS = 60_000;
-// FIX 1: Longgarkan window replay menjadi 10 menit untuk mengatasi clock drift/delay
 const REPLAY_WINDOW_MS = 10 * 60_000;
 
 interface RateEntry { count: number; lastReset: number; }
@@ -36,6 +35,20 @@ function applySylvorHeaders(res: NextResponse | Response): void {
 
 function jsonWithSecurity(data: unknown, init?: ResponseInit) {
   const res = NextResponse.json(data, init);
+  applySylvorHeaders(res);
+  return res;
+}
+
+// Helper untuk mengembalikan Text Stream langsung (Biar match dengan UI Frontend)
+function textWithSecurity(text: string, status = 200) {
+  const res = new Response(text, {
+    status,
+    headers: {
+      "Content-Type": "text/plain; charset=utf-8",
+      "Cache-Control": "no-cache, no-transform",
+      "X-Content-Type-Options": "nosniff"
+    }
+  });
   applySylvorHeaders(res);
   return res;
 }
@@ -95,7 +108,6 @@ export async function POST(request: NextRequest) {
 
     // 3. ANTI-REPLAY PROTECTION
     const now = Date.now();
-    // FIX 2: Kembalikan respons 400 JSON rapi jika timestamp kedaluwarsa (bukan crash 500)
     if (_ts && Math.abs(now - Number(_ts)) > REPLAY_WINDOW_MS) {
       logSecurityEvent('EXPIRED_TIMESTAMP', request, { clientTs: _ts, serverTs: now });
       return jsonWithSecurity({ error: "Expired request timestamp" }, { status: 400 });
@@ -111,17 +123,24 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 4. VALIDASI INPUT
+    // 4. VALIDASI INPUT & GUARDRAILS
     if (message.length > MAX_MESSAGE_LENGTH) {
       return jsonWithSecurity({ error: "Message too long" }, { status: 400 });
     }
+
+    // FIX: Kembalikan plain text langsung agar UI tidak menampilkan JSON string mentah
     if (injectionPhrases.some(re => re.test(message))) {
-      return jsonWithSecurity({
-        response: "Maaf kak 😅 Saya hanya bisa bantu seputar portfolio Muhammad Kasyaf Anugrah."
-      });
+      return textWithSecurity("Maaf kak 😅 Saya hanya bisa bantu seputar portfolio Muhammad Kasyaf Anugrah.");
     }
 
+    // Sanitasi input
     const sanitizedMessage = message.replace(/[<>{}[\]\\]/g, "").trim();
+
+    // Jaga-jaga jika pesan menjadi kosong setelah sanitasi tag/karakter spesial
+    if (!sanitizedMessage) {
+      return textWithSecurity("Input tidak valid atau mengandung karakter yang diblokir.");
+    }
+
     const apiKey = process.env.GROQ_API_KEY;
     if (!apiKey) {
       console.error("[GROQ_ERROR] GROQ_API_KEY environment variable is missing.");
@@ -134,7 +153,6 @@ export async function POST(request: NextRequest) {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), GROQ_TIMEOUT_MS);
 
-    // Gunakan ID model yang aktif dari respon Groq API
     const GROQ_MODEL = "groq/compound";
 
     const groqResponse = await fetch("https://api.groq.com/openai/v1/chat/completions", {
@@ -159,12 +177,11 @@ export async function POST(request: NextRequest) {
 
     if (!groqResponse.ok || !groqResponse.body) {
       const errText = await groqResponse.text().catch(() => '');
-      // Log ini akan menampilkan alasan pasti dari Groq di Vercel Logs
       console.error(`[GROQ_ERROR_DETAILS] Status: ${groqResponse.status} | Body: ${errText}`);
       return jsonWithSecurity({ error: "AI service error" }, { status: 502 });
     }
 
-    // FIX 3: Handling Safe Stream Reader
+    // 6. SAFE STREAM READER
     const groqBody = groqResponse.body;
     const stream = new ReadableStream({
       async start(ctrl) {
@@ -196,15 +213,7 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    const res = new Response(stream, {
-      headers: {
-        "Content-Type": "text/plain; charset=utf-8",
-        "Cache-Control": "no-cache, no-transform",
-        "X-Content-Type-Options": "nosniff"
-      }
-    });
-    applySylvorHeaders(res);
-    return res;
+    return textWithSecurity(stream as any);
 
   } catch (e: any) {
     if (e.name === 'AbortError') {
