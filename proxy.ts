@@ -168,7 +168,7 @@ export async function proxy(request: NextRequest) {
 
   if (isBot(request)) {
     logSecurityEvent('BOT_CRAWLER_BLOCKED', request, { pathname });
-    const res = new NextResponse('Access Denied', { status: 403 });
+    const res = NextResponse.json({ error: 'Access Denied' }, { status: 403 });
     setSecurityHeaders(res, nonce, pathname);
     return res;
   }
@@ -207,7 +207,7 @@ export async function proxy(request: NextRequest) {
     const deviceId = request.cookies.get('__Host-device_id')?.value || request.cookies.get('device_id')?.value;
     const verifiedSid = await verifySessionWithDevice(sessionId, deviceId, ua);
     if (!verifiedSid) {
-      const res = new NextResponse('Unauthorized', { status: 401 });
+      const res = NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
       setSecurityHeaders(res, nonce, pathname);
       return res;
     }
