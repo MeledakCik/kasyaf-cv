@@ -1,4 +1,4 @@
-// app/api/chat-ai/route.ts - FINAL v7 (Hardened & Proxy Integrated)
+// app/api/chat-ai/route.ts - FIX v7.1
 import { NextRequest, NextResponse } from "next/server";
 import { verifyInternalToken } from "@/lib/auth";
 
@@ -6,7 +6,8 @@ const MAX_MESSAGE_LENGTH = 2000;
 const GROQ_TIMEOUT_MS = 15000;
 const RATE_LIMIT_MAX = parseInt(process.env.RATE_LIMIT_MAX || '20');
 const RATE_LIMIT_WINDOW_MS = 60_000;
-const REPLAY_WINDOW_MS = 60_000;
+// FIX 1: Longgarkan window replay menjadi 10 menit untuk mengatasi clock drift/delay
+const REPLAY_WINDOW_MS = 10 * 60_000;
 
 interface RateEntry { count: number; lastReset: number; }
 const rateLimitMap = new Map<string, RateEntry>();
@@ -48,7 +49,6 @@ const injectionPhrases = [
   /system\s+prompt/i,
 ];
 
-// === KONTEKS PORTFOLIO ===
 const CV_CONTEXT = `
 NAMA: Muhammad Kasyaf Anugrah - Full Stack Developer & Cyber Security Enthusiast
 LOKASI: Bandung, Indo - Universitas Komputer Indonesia
@@ -71,11 +71,8 @@ KONTEKS: ${CV_CONTEXT}`;
 export async function POST(request: NextRequest) {
   try {
     const pathname = request.nextUrl.pathname;
-    
-    // -------------------------------------------------------------------------
+
     // 1. VERIFIKASI INTERNAL TOKEN DARI PROXY
-    // Memastikan request HANYA bisa lewat jika diproses oleh proxy.ts
-    // -------------------------------------------------------------------------
     const internalToken = request.headers.get('x-internal-auth');
     const isValidToken = await verifyInternalToken(internalToken, pathname);
 
@@ -84,12 +81,9 @@ export async function POST(request: NextRequest) {
       return jsonWithSecurity({ error: "Unauthorized access" }, { status: 401 });
     }
 
-    // Ambil Session ID sah yang disuntikkan oleh Proxy
     const sessionId = request.headers.get('x-session-id') || 'unknown-session';
 
-    // -------------------------------------------------------------------------
     // 2. RATE LIMITING PER SESSION
-    // -------------------------------------------------------------------------
     if (!checkRateLimit(sessionId)) {
       return jsonWithSecurity({ error: "Too many requests" }, { status: 429 });
     }
@@ -99,28 +93,25 @@ export async function POST(request: NextRequest) {
 
     const { message, detectedSection, _ts, _nonce } = body;
 
-    // -------------------------------------------------------------------------
     // 3. ANTI-REPLAY PROTECTION
-    // -------------------------------------------------------------------------
     const now = Date.now();
-    if (!_ts || Math.abs(now - _ts) > REPLAY_WINDOW_MS) {
+    // FIX 2: Kembalikan respons 400 JSON rapi jika timestamp kedaluwarsa (bukan crash 500)
+    if (_ts && Math.abs(now - Number(_ts)) > REPLAY_WINDOW_MS) {
+      logSecurityEvent('EXPIRED_TIMESTAMP', request, { clientTs: _ts, serverTs: now });
       return jsonWithSecurity({ error: "Expired request timestamp" }, { status: 400 });
     }
-    if (!_nonce || usedNonces.has(_nonce)) {
+    if (_nonce && usedNonces.has(_nonce)) {
       return jsonWithSecurity({ error: "Replay attack detected" }, { status: 400 });
     }
-    usedNonces.set(_nonce, now);
+    if (_nonce) usedNonces.set(_nonce, now);
 
-    // Housekeeping nonce cache
     if (usedNonces.size > 5000) {
       for (const [k, v] of usedNonces) {
         if (now - v > REPLAY_WINDOW_MS) usedNonces.delete(k);
       }
     }
 
-    // -------------------------------------------------------------------------
-    // 4. VALIDASI INPUT & PROMPT INJECTION GUARD
-    // -------------------------------------------------------------------------
+    // 4. VALIDASI INPUT
     if (message.length > MAX_MESSAGE_LENGTH) {
       return jsonWithSecurity({ error: "Message too long" }, { status: 400 });
     }
@@ -132,13 +123,14 @@ export async function POST(request: NextRequest) {
 
     const sanitizedMessage = message.replace(/[<>{}[\]\\]/g, "").trim();
     const apiKey = process.env.GROQ_API_KEY;
-    if (!apiKey) return jsonWithSecurity({ error: "Server misconfigured" }, { status: 500 });
+    if (!apiKey) {
+      console.error("[GROQ_ERROR] GROQ_API_KEY environment variable is missing.");
+      return jsonWithSecurity({ error: "Server misconfigured" }, { status: 500 });
+    }
 
     const systemPrompt = buildSystemPrompt(detectedSection || null);
 
-    // -------------------------------------------------------------------------
-    // 5. GROQ API CALL & STREAMING RESPONSE
-    // -------------------------------------------------------------------------
+    // 5. GROQ API CALL
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), GROQ_TIMEOUT_MS);
 
@@ -162,13 +154,17 @@ export async function POST(request: NextRequest) {
     });
     clearTimeout(timeoutId);
 
-    if (!groqResponse.ok) {
-      return jsonWithSecurity({ error: "AI service error" }, { status: 500 });
+    if (!groqResponse.ok || !groqResponse.body) {
+      const errText = await groqResponse.text().catch(() => '');
+      console.error("[GROQ_FETCH_ERROR]", groqResponse.status, errText);
+      return jsonWithSecurity({ error: "AI service error" }, { status: 502 });
     }
 
+    // FIX 3: Handling Safe Stream Reader
+    const groqBody = groqResponse.body;
     const stream = new ReadableStream({
       async start(ctrl) {
-        const reader = groqResponse.body!.getReader();
+        const reader = groqBody.getReader();
         const decoder = new TextDecoder();
         let buf = "";
         while (true) {
