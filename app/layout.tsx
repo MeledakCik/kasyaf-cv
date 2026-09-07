@@ -1,10 +1,10 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import Script from "next/script";
 import "./globals.css";
 import { headers } from "next/headers";
 import SensorProvider from "@/components/sensor-provider";
 import { CvErrorBoundary } from "@/components/error-boundary";
+
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -47,7 +47,7 @@ export const metadata: Metadata = {
   creator: NAME,
   applicationName: `${NAME} Portfolio`,
   alternates: {
-    canonical: SITE_URL,
+    canonical: "./",
   },
   robots: {
     index: true,
@@ -93,6 +93,7 @@ export const metadata: Metadata = {
     google: "yImAoad-DsRa1AEEZYEVhFLn2-ODwo8vwm3Gyy7e-SU",
   },
 };
+
 const jsonLd = {
   "@context": "https://schema.org",
   "@type": "Person",
@@ -108,6 +109,10 @@ const jsonLd = {
     "Back End Development",
     "Cyber Security",
   ],
+  alumniOf: {
+    "@type": "EducationalOrganization",
+    name: "Universitas Komputer Indonesia",
+  },
   sameAs: [
     "https://github.com/K4K4NG",
     "https://linkedin.com/in/muhammad-kasyaf-anugrah",
@@ -121,15 +126,15 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const nonce = (await headers()).get("x-nonce") ?? "";
+
   return (
     <html
       lang="id"
       className={`${geistSans.variable} ${geistMono.variable} h-full bg-black antialiased`}
     >
       <head>
-        <Script
+        <script
           nonce={nonce}
-          id="person-jsonld"
           type="application/ld+json"
           dangerouslySetInnerHTML={{
             __html: JSON.stringify(jsonLd),
