@@ -272,7 +272,7 @@ export default function ExperienceSection() {
               <div className="relative w-28 h-28 sm:w-32 sm:h-32 rounded-2xl overflow-hidden border-2 border-white/10 bg-[#12121c] shadow-xl flex items-center justify-center">
                 {/* ✅ Gambar LinkedIn - sudah dikonfigurasi di next.config.ts */}
                 <Image
-                  src="https://media.licdn.com/dms/image/v2/D5603AQElMlzBsWT5ag/profile-displayphoto-scale_200_200/B56ZxCQ8h5GYAY-/0/1770638266986?e=2147483647&v=beta&t=BQ_GhUv_6ThpcW9wjuqcGkpr1F0NVkca0Dvhx_sqm0k"
+                  src="https://media.licdn.com/dms/image/v2/D5603AQENgPG3vGmg9w/profile-displayphoto-scale_100_100/B56aBIQcDsGsAY-/0/1787918665039?e=1790208000&v=beta&t=fz1hYC2aSJa4hsCqu95s5s9-84mB6Xxc6ch4bU1jDRg"
                   alt="Profile Kasyaf"
                   fill
                   className="object-cover group-hover:scale-105 transition-transform duration-500"
