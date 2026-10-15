@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { generateChallenge } from '@/lib/pow-challenge';
 
 const challengeHits = new Map<string, { count: number; reset: number }>();
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://kasyaf-cv.my.id';
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://kasyaf-cv.my.id' || 'https://www.kasyaf-cv.my.id' || 'https://kasyaf.id' || 'https://www.kasyaf.id';
 
 function applySylvorHeaders(res: NextResponse): NextResponse {
   res.headers.set('Accept-CH', 'Sec-CH-UA, Sec-CH-UA-Mobile, Sec-CH-UA-Platform');

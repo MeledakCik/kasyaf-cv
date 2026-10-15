@@ -115,7 +115,7 @@ const nextConfig: NextConfig = {
           { key: "Access-Control-Allow-Credentials", value: "true" },
           {
             key: "Access-Control-Allow-Origin",
-            value: process.env.NEXT_PUBLIC_APP_URL || "https://kasyaf-cv.my.id",
+            value: process.env.NEXT_PUBLIC_APP_URL || "https://kasyaf.id" || "https://www.kasyaf.id" || "https://kasyaf-cv.my.id" || "https://www.kasyaf-cv.my.id",
           },
           {
             key: "Access-Control-Allow-Methods",

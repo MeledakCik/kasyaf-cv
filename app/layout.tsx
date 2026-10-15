@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const SITE_URL = "https://kasyaf-cv.my.id";
+const SITE_URL = "https://kasyaf.id";
 const NAME = "Muhammad Kasyaf Anugrah";
 
 export const viewport: Viewport = {
