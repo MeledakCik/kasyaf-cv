@@ -27,7 +27,7 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: `${NAME} - Full Stack Developer & Cyber Security`,
+    default: `${NAME} | Full Stack Developer & Cyber Security`,
     template: `%s | ${NAME}`,
   },
   description:
@@ -61,7 +61,7 @@ export const metadata: Metadata = {
     },
   },
   openGraph: {
-    title: `${NAME} - Full Stack Developer & Cyber Security`,
+    title: `${NAME} | Full Stack Developer & Cyber Security`,
     description:
       "Portofolio Muhammad Kasyaf Anugrah, Full Stack Developer yang fokus di front end, back end, dan cyber security.",
     url: SITE_URL,
@@ -79,7 +79,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: `${NAME} - Full Stack Developer & Cyber Security`,
+    title: `${NAME} | Full Stack Developer & Cyber Security`,
     description:
       "Portofolio Muhammad Kasyaf Anugrah, Full Stack Developer yang fokus di front end, back end, dan cyber security.",
     images: [`${SITE_URL}/images/logo.png`],
@@ -114,6 +114,7 @@ const jsonLd = {
     name: "Universitas Komputer Indonesia",
   },
   sameAs: [
+    "https://kasyaf-cv.my.id", // Menghubungkan domain kedua agar diakui sebagai identitas yang sama
     "https://github.com/K4K4NG",
     "https://linkedin.com/in/muhammad-kasyaf-anugrah",
     "https://instagram.com/kkngksyf__",
