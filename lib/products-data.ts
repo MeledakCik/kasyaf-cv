@@ -28,10 +28,10 @@ export const PRODUCTS: Product[] = [
     id: "kasyaf-cloud",
     title: "Kasyaf Cloud",
     category: "Web App",
-    image: shot("https://www.kasyaf.id/"),
+    image: shot("https://console.kasyaf.id/"),
     description:
       "Managed Redis & Vector Database (Qdrant) yang ringan — alternatif Upstash, cepat dan terjangkau, jalan di Local maupun VPS.",
-    link: "https://www.kasyaf.id/",
+    link: "https://console.kasyaf.id/",
   },
   {
     id: "sentinel-id",
