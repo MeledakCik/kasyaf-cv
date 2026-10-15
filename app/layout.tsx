@@ -90,7 +90,7 @@ export const metadata: Metadata = {
     apple: "/images/logo.png",
   },
   verification: {
-    google: "yImAoad-DsRa1AEEZYEVhFLn2-ODwo8vwm3Gyy7e-SU",
+    google: "BhxoCE5pDRmhMsvBgkRdKyw8dqNYMFc4jvOfFclWLRw",
   },
 };
 
