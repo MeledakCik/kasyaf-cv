@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyInternalToken } from "@/lib/auth";
 import { PROJECTS } from "@/data/projects";
+import { experiences } from "@/data/experience";
 
 const MAX_MESSAGE_LENGTH = 2000;
 const GROQ_TIMEOUT_MS = 15000;
@@ -66,6 +67,7 @@ const injectionPhrases = [
 const PROJECTS_CONTEXT = PROJECTS.map(
   (p) =>
     `- ${p.name} (${p.category}; ${p.platforms.join("/")}; ${p.status}): ${p.description} ` +
+    `Highlights: ${p.highlights.join("; ")}. ` +
     `Stack: ${p.stack.join(", ")}.` +
     (p.liveUrl ? ` Live: ${p.liveUrl}.` : "") +
     (p.repoUrl ? ` Source: ${p.repoUrl}.` : ""),
@@ -77,14 +79,11 @@ LOCATION: Bandung, Indonesia. Open to remote work, national and international.
 EDUCATION: Information Technology, Universitas Komputer Indonesia (UNIKOM), expected graduation July 2029.
 SKILLS:
 - Web: React, Next.js, TypeScript, Tailwind CSS, Three.js, Framer Motion, Node.js, REST APIs
-- Mobile & desktop: Kotlin (Android), Swift (iOS), C# .NET 8 (WPF/WinForms)
+- Mobile & desktop: Kotlin (Android), Swift (iOS), C# .NET 8 (WinForms for DepUp Office Desktop, WPF for Depup Code)
 - Cloud & DevOps: Vercel, Cloudflare Pages, Railway, Docker, Redis, Supabase, CI/CD
 - Security: secure coding, app hardening (anti-tamper, encryption), passive security auditing, CTF
-EXPERIENCE:
-- 2024-present: Full Stack Developer (freelance). Designs, builds and secures full stack web apps.
-- 2023-2024: Back End Engineer. Hardened REST APIs with RBAC.
-- 2022-2023: Front End Developer. Agency work with React/Next.js.
-- 2021-2022: CTF enthusiast. Web exploitation & network fundamentals.
+EXPERIENCE (same as the Experience section on the site):
+${experiences.map((e) => `- ${e.period}: ${e.role} (${e.org}). ${e.desc}`).join("\n")}
 FEATURED PROJECTS:
 ${PROJECTS_CONTEXT}
 CONTACT: email kakangkasyaf@gmail.com · LinkedIn linkedin.com/in/muhammad-kasyaf-anugrah · GitHub github.com/MeledakCik · website https://kasyaf.id (contact section on the site).
@@ -228,7 +227,8 @@ export async function POST(request: NextRequest) {
     // Covers the whole exchange, including streaming (cleared when the stream ends).
     const timeoutId = setTimeout(() => controller.abort(), GROQ_TIMEOUT_MS * 2);
 
-    const GROQ_MODEL = process.env.GROQ_MODEL || "groq/compound";
+    const GROQ_MODEL = process.env.GROQ_MODEL || "openai/gpt-oss-120b";
+    const isReasoningModel = /gpt-oss|qwen3|deepseek-r1/i.test(GROQ_MODEL);
     const history = sanitizeHistory(body.history);
 
     const groqResponse = await fetch("https://api.groq.com/openai/v1/chat/completions", {
@@ -246,7 +246,9 @@ export async function POST(request: NextRequest) {
         ],
         // Previously 60 tokens whenever a section keyword was detected,
         // which cut answers off mid-sentence.
-        max_tokens: 700,
+        // Reasoning models spend part of the budget thinking; keep it low/fast.
+        max_tokens: isReasoningModel ? 1200 : 700,
+        ...(isReasoningModel ? { reasoning_effort: "low" } : {}),
         temperature: 0.4,
         stream: true,
       }),

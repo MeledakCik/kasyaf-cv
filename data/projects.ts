@@ -37,9 +37,9 @@ export const PROJECTS: PortfolioProject[] = [
     highlights: [
       "DOCX/XLSX/PDF writers and readers built from scratch (no third-party document libraries)",
       "AES-256-GCM vault, anti-tamper & anti-prompt-injection hardening (v4.1)",
-      "Same feature set ported to iOS (Swift) and Windows (C# .NET 8)",
+      "Same feature set ported to iOS (Swift) and Windows (C# .NET 8 WinForms + GDI+, zero NuGet dependencies)",
     ],
-    stack: ["Kotlin", "Swift", "C# .NET 8", "OCR", "AES-256-GCM"],
+    stack: ["Kotlin", "Swift", "C# .NET 8 WinForms", "OCR", "AES-256-GCM"],
     platforms: ["Android", "iOS", "Windows"],
     category: "Mobile & Desktop",
     schemaCategory: "BusinessApplication",

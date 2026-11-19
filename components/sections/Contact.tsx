@@ -24,8 +24,8 @@ const LINKS = [
   },
   { 
     label: 'GitHub', 
-    value: 'github.com/K4K4NG', 
-    href: 'https://github.com/K4K4NG',
+    value: 'github.com/MeledakCik', 
+    href: 'https://github.com/MeledakCik',
     icon: Github,
     color: 'from-purple-500/20 to-purple-500/5',
     borderColor: 'border-purple-500/30'
