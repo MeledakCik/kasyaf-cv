@@ -1,7 +1,6 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import Background from "@/components/BackgroundCanvas";
 import { SandEmitter } from "@/components/function/SabdEmitter";
 import { useRouter } from "next/navigation";
 import LoadingScreen from "@/components/LoadingScreen";
@@ -140,12 +139,17 @@ export default function AboutSection({ onClose }: { onClose: () => void }) {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
+  // Warm up the next pages so the transition doesn't wait on the network.
+  useEffect(() => {
+    Object.values(NAVIGATE_ROUTES).forEach((path) => router.prefetch(path));
+  }, [router]);
+
   const handleNavigate = (e: React.MouseEvent, path: string) => {
     e.stopPropagation();
     setIsLoading(true);
     setTimeout(() => {
       router.push(path);
-    }, 800);
+    }, 400);
   };
 
   const handleSelect = (e: React.MouseEvent, id: string) => {
@@ -161,16 +165,6 @@ export default function AboutSection({ onClose }: { onClose: () => void }) {
                  flex flex-col items-center justify-center 
                  overflow-hidden px-3 py-2 sm:px-6 sm:py-8 md:px-8 md:py-12"
     >
-      <motion.div
-        className="fixed inset-0 pointer-events-none -z-10"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        transition={{ duration: 0.6 }}
-      >
-        <Background />
-      </motion.div>
-
       <AnimatePresence mode="wait">
         {isLoading ? (
           <motion.div
@@ -201,7 +195,8 @@ export default function AboutSection({ onClose }: { onClose: () => void }) {
                   isOdd && index === CARDS.length - 1;
 
                 return (
-                  <motion.div
+                  <motion.button
+                    type="button"
                     key={card.id}
                     layoutId={navigateTo ? undefined : `card-${card.id}`}
                     variants={cardVariants}
@@ -217,7 +212,8 @@ export default function AboutSection({ onClose }: { onClose: () => void }) {
                                flex flex-col items-center justify-center 
                                gap-2 sm:gap-3 md:gap-4 
                                cursor-pointer 
-                               transition-all duration-300 
+                               transition-[background-color,border-color,box-shadow] duration-300 
+                               focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50
                                group
                                relative
                                overflow-hidden
@@ -247,15 +243,15 @@ export default function AboutSection({ onClose }: { onClose: () => void }) {
                       {card.icon}
                     </div>
 
-                    <h2 className="text-sm sm:text-xl md:text-2xl 
+                    <span className="text-sm sm:text-xl md:text-2xl 
                                    font-light tracking-wide 
                                    text-white/90 drop-shadow-lg 
                                    text-center px-2">
                       {card.title}
-                    </h2>
+                    </span>
 
-                    <div className="absolute bottom-3 left-1/2 -translate-x-1/2 w-0 h-0.5 bg-white/30 rounded-full transition-all duration-300 group-hover:w-1/3" />
-                  </motion.div>
+                    <div className="absolute bottom-3 left-1/2 -translate-x-1/2 w-0 h-0.5 bg-white/30 rounded-full transition-all duration-300 group-hover:w-1/3 group-focus-visible:w-1/3" />
+                  </motion.button>
                 );
               })}
             </motion.div>

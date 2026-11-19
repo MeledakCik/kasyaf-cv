@@ -8,7 +8,8 @@ export async function requireInternalAuth(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const sessionId = request.cookies.get('session_id')?.value;
+  const sessionId =
+    request.cookies.get('__Host-session_id')?.value || request.cookies.get('session_id')?.value;
   const sessionData = await verifySignedData(sessionId);
   if (!sessionData) {
     return NextResponse.json({ error: 'Session invalid' }, { status: 401 });

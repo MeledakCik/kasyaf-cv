@@ -84,10 +84,8 @@ const nextConfig: NextConfig = {
       {
         source: "/((?!sitemap.xml|robots.txt|favicon.ico|_next/static|_next/image).*)",
         headers: [
-          // --- HEADER SIGNATURE WAF ---
-          { key: "X-Cik-Guard", value: "active" },
-          { key: "X-Protected-By", value: "Vercel-Custom-WAF" },
-          { key: "X-WAF-Event-ID", value: "guard-enabled" },
+          // (Fingerprint headers like "X-Protected-By: Vercel-Custom-WAF" removed:
+          //  advertising the stack only helps attackers pick their tools.)
 
           // --- HEADER KEAMANAN STANDAR ---
           { key: "X-Content-Type-Options", value: "nosniff" },
@@ -100,7 +98,8 @@ const nextConfig: NextConfig = {
           },
           {
             key: "Permissions-Policy",
-            value: "camera=(), microphone=(), geolocation=(), payment=(), usb=(), magnetometer=(), gyroscope=()",
+            value:
+              "camera=(), microphone=(), geolocation=(), payment=(), usb=(), magnetometer=(), gyroscope=(), accelerometer=(), bluetooth=(), serial=(), hid=(), browsing-topics=()",
           },
           {
             key: "Strict-Transport-Security",
@@ -115,15 +114,18 @@ const nextConfig: NextConfig = {
           { key: "Access-Control-Allow-Credentials", value: "true" },
           {
             key: "Access-Control-Allow-Origin",
-            value: process.env.NEXT_PUBLIC_APP_URL || "https://kasyaf.id" || "https://www.kasyaf.id" || "https://kasyaf-cv.my.id" || "https://www.kasyaf-cv.my.id",
+            // A CORS header holds exactly ONE origin; `a || b || c` only ever used the first.
+            value: process.env.NEXT_PUBLIC_APP_URL || "https://kasyaf.id",
           },
           {
             key: "Access-Control-Allow-Methods",
             value: "GET,POST,OPTIONS",
           },
+          { key: "Vary", value: "Origin" },
           {
             key: "Access-Control-Allow-Headers",
-            value: "Content-Type, Authorization, X-Session-Id, X-Internal-Auth, X-Nonce",
+            // Internal headers are set by proxy.ts only; browsers never need to send them.
+            value: "Content-Type, Authorization",
           },
         ],
       },

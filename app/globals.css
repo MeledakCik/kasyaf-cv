@@ -328,3 +328,57 @@
     padding: 2px 6px !important;
   }
 }
+/* ===== Loader (CSS only, GPU-friendly: transform/opacity) ===== */
+.loader-orbit {
+  position: relative;
+  width: 72px;
+  height: 72px;
+}
+.loader-orbit span {
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  border-top-color: rgba(56, 189, 248, 0.9);
+  animation: loader-spin 1.1s cubic-bezier(0.5, 0.1, 0.5, 0.9) infinite;
+}
+.loader-orbit span:nth-child(2) {
+  inset: 10px;
+  border-top-color: rgba(139, 92, 246, 0.85);
+  animation-duration: 1.6s;
+  animation-direction: reverse;
+}
+.loader-orbit span:nth-child(3) {
+  inset: 22px;
+  border-top-color: rgba(57, 230, 181, 0.8);
+  animation-duration: 0.9s;
+}
+@keyframes loader-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ===== Low-end devices: drop the costliest compositor effects ===== */
+/* data-perf is set by components/client-providers.tsx */
+html[data-perf="low"] *,
+html[data-perf="low"] *::before,
+html[data-perf="low"] *::after {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+html[data-perf="low"] .blur-2xl,
+html[data-perf="low"] .blur-3xl {
+  filter: none !important;
+  opacity: 0.25;
+}
+
+/* ===== Respect the OS "reduce motion" setting ===== */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

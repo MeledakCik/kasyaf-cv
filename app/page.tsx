@@ -46,29 +46,37 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      document.documentElement.style.setProperty("--x", e.clientX + "px");
-      document.documentElement.style.setProperty("--y", e.clientY + "px");
+    // Cursor glow only for mouse/trackpad; batched to one style write per frame.
+    if (window.matchMedia("(pointer: coarse)").matches) return;
+    const root = document.documentElement;
+    let raf = 0;
+    let x = 0;
+    let y = 0;
+    const handler = (e: PointerEvent) => {
+      x = e.clientX;
+      y = e.clientY;
+      if (raf) return;
+      raf = requestAnimationFrame(() => {
+        root.style.setProperty("--x", x + "px");
+        root.style.setProperty("--y", y + "px");
+        raf = 0;
+      });
     };
-    window.addEventListener("mousemove", handler);
-    return () => window.removeEventListener("mousemove", handler);
+    window.addEventListener("pointermove", handler, { passive: true });
+    return () => {
+      window.removeEventListener("pointermove", handler);
+      if (raf) cancelAnimationFrame(raf);
+    };
   }, []);
 
   return (
     <main
       className={`${poppins.className} bg-black relative min-h-screen w-full overflow-hidden`}
     >
-      <motion.div
-        className="fixed inset-0"
-        animate={
-          isTransitioning
-            ? { scale: 1.5, opacity: 0 }
-            : { scale: 1, opacity: 1 }
-        }
-        transition={{ duration: 0.7, ease: "easeInOut" }}
-      >
-        <BackgroundCanvas isAbout={showAbout} />
-      </motion.div>
+      {/* One persistent WebGL canvas for the whole flow: the "enter" transition
+          is a warp of the same star field instead of fading it out and
+          spinning up a second WebGL context. */}
+      <BackgroundCanvas isAbout={isTransitioning || showAbout} />
 
       <AnimatePresence mode="wait">
         {isLoading ? (
@@ -92,7 +100,7 @@ export default function Home() {
             <motion.div
               animate={
                 isTransitioning
-                  ? { scale: 5, opacity: 0, filter: "blur(20px)" }
+                  ? { scale: 1.8, opacity: 0 }
                   : { scale: 1, opacity: 1 }
               }
               transition={{ duration: 0.7, ease: [0.76, 0, 0.24, 1] }}
@@ -105,7 +113,8 @@ export default function Home() {
                 Full Stack Developer • Cyber Security
               </p>
               <button
-                className="relative cursor-pointer px-8 py-3 md:px-10 md:py-4 rounded-full border border-sky-500/30 bg-sky-950/20 backdrop-blur-md text-sm md:text-base tracking-[0.2em] uppercase pointer-events-auto hover:border-sky-500/80 transition-all"
+                type="button"
+                className="relative cursor-pointer px-8 py-3 md:px-10 md:py-4 rounded-full border border-sky-500/30 bg-sky-950/20 backdrop-blur-md text-sm md:text-base tracking-[0.2em] uppercase pointer-events-auto hover:border-sky-500/80 hover:bg-sky-900/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/70 transition-colors"
                 onClick={handleEnter}
               >
                 Enter the profile
@@ -119,7 +128,7 @@ export default function Home() {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-            className="fixed inset-0 z-50 bg-black select-none"
+            className="fixed inset-0 z-50 select-none"
           >
             <AboutSection onClose={handleClose} />
           </motion.div>

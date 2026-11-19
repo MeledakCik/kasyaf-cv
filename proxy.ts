@@ -41,18 +41,20 @@ interface RateEntry { count: number; lastReset: number; lastSeen: number; }
 const rateLimitMap = new Map<string, RateEntry>();
 let lastCleanup = Date.now();
 
-function logSecurityEvent(type: string, req: NextRequest, extra: any = {}) {
+function logSecurityEvent(type: string, req: NextRequest, extra: { pathname?: string } = {}) {
   const ip = getClientIp(req);
   console.warn(`[SECURITY] ${type} | ip=${ip} | path=${extra.pathname || req.nextUrl.pathname}`);
 }
 
+// Order matters: headers set by the hosting edge first; cf-connecting-ip last
+// because any client can send it when the site is not behind Cloudflare.
 function getClientIp(req: NextRequest): string {
   return (
     req.headers.get('x-vercel-forwarded-for')?.split(',')[0].trim() ||
-    req.headers.get('cf-connecting-ip') ||
     req.headers.get('x-real-ip') ||
     req.headers.get('x-forwarded-for')?.split(',')[0].trim() ||
-    (req as any).ip ||
+    req.headers.get('cf-connecting-ip') ||
+    (req as NextRequest & { ip?: string }).ip ||
     '127.0.0.1'
   );
 }
@@ -74,7 +76,13 @@ function getRateLimitConfigAndCheck(compositeId: string, pathname: string): bool
 
 function isBot(req: NextRequest): boolean {
   const ua = (req.headers.get('user-agent') || '').toLowerCase();
-  if (['googlebot', 'bingbot', 'yandexbot', 'duckduckbot', 'google', 'adsbot', 'mediapartners', 'apis-google', 'google-structured-data'].some(b => ua.includes(b))) {
+  // Bare 'google' was a free pass for any UA containing that word.
+  const allowedCrawlers = [
+    'googlebot', 'google-inspectiontool', 'googleother', 'adsbot-google', 'mediapartners-google',
+    'apis-google', 'google-structured-data', 'storebot-google', 'bingbot', 'yandexbot', 'duckduckbot',
+    'facebookexternalhit', 'twitterbot', 'linkedinbot', 'slackbot', 'discordbot', 'telegrambot', 'whatsapp',
+  ];
+  if (allowedCrawlers.some(b => ua.includes(b))) {
     return false;
   }
   if (!ua || ua.length < 8) return true;
@@ -97,7 +105,7 @@ function generateNonce(): string {
   return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
-function base64urlDecodeToJson(b64url: string): any {
+function base64urlDecodeToJson(b64url: string): { iat?: number } | null {
   try {
     const b64 = b64url.replace(/-/g, '+').replace(/_/g, '/');
     const binary = atob(b64);
@@ -113,14 +121,34 @@ function buildCsp(nonce: string): string {
   const scriptSrc = isDev
     ? `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' 'unsafe-eval' 'unsafe-inline' 'wasm-unsafe-eval' https://cdn.jsdelivr.net https://unpkg.com`
     : `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' 'wasm-unsafe-eval' https://cdn.jsdelivr.net https://unpkg.com`;
+  const devConnect = isDev ? ' ws://localhost:* wss://localhost:* http://localhost:*' : '';
   return [
     `base-uri 'self'`, `default-src 'self'`, scriptSrc,
     `style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net https://unpkg.com`,
     `font-src 'self' data: https://fonts.gstatic.com https://cdn.jsdelivr.net https://unpkg.com`,
     `img-src 'self' data: blob: https:`,
-    `connect-src 'self' ${backendUrl} https://kasyaf-ai-agent.my.id https://www.kasyaf-ai-agent.my.id https://*.githack.com https://*.githubusercontent.com https://api.groq.com https://cdn.jsdelivr.net https://unpkg.com https://lottie.host https://*.lottiefiles.com wss://*.sylvorlabs.com wss://${backendUrl.replace('https://', '')} ws://localhost:* wss://localhost:* http://localhost:* https://unpkg.com`,
+    `connect-src 'self' ${backendUrl} https://kasyaf-ai-agent.my.id https://www.kasyaf-ai-agent.my.id https://*.githack.com https://*.githubusercontent.com https://api.groq.com https://cdn.jsdelivr.net https://unpkg.com https://lottie.host https://*.lottiefiles.com wss://*.sylvorlabs.com wss://${backendUrl.replace('https://', '')}${devConnect}`,
     `media-src 'self' ${backendUrl} blob:`, `object-src 'none'`, `frame-ancestors 'none'`, `form-action 'self'`, `worker-src 'self' blob: https://cdn.jsdelivr.net https://unpkg.com`,
+    `manifest-src 'self'`,
+    ...(isDev ? [] : ['upgrade-insecure-requests']),
   ].join('; ');
+}
+
+const INTERNAL_HEADERS = ['x-internal-auth', 'x-session-id', 'x-nonce', 'content-security-policy'];
+
+/**
+ * Copy of the incoming request headers that is safe to forward:
+ * - strips any client-supplied internal headers (only the proxy may set them)
+ * - adds the CSP on the *request* too: Next.js reads the nonce from the request
+ *   CSP header and stamps it on its own <script> tags. Without this, framework
+ *   scripts carry no nonce and 'strict-dynamic' blocks them.
+ */
+function buildRequestHeaders(request: NextRequest, nonce: string): Headers {
+  const headers = new Headers(request.headers);
+  for (const h of INTERNAL_HEADERS) headers.delete(h);
+  headers.set('x-nonce', nonce);
+  headers.set('Content-Security-Policy', buildCsp(nonce));
+  return headers;
 }
 
 function setSecurityHeaders(res: NextResponse, nonce: string, pathname: string = '') {
@@ -136,6 +164,10 @@ function setSecurityHeaders(res: NextResponse, nonce: string, pathname: string =
   if (process.env.NODE_ENV === 'production') {
     res.headers.set('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload');
   }
+  res.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+  if (pathname.startsWith('/api/')) {
+    res.headers.set('Cache-Control', 'no-store');
+  }
 }
 
 export async function proxy(request: NextRequest) {
@@ -149,8 +181,14 @@ export async function proxy(request: NextRequest) {
   const nonce = generateNonce();
   const ua = request.headers.get('user-agent') || '';
   const ip = getClientIp(request);
-  const SECRET_KEY = process.env.COOKIE_SECRET || 'default-fallback-secret-key-32chars';
   const isProd = process.env.NODE_ENV === 'production';
+  const SECRET_KEY = process.env.COOKIE_SECRET || (isProd ? '' : 'dev-only-insecure-secret-change-me');
+  // Fail closed: a missing/short secret in production would make every signed
+  // cookie and internal token forgeable.
+  if (!SECRET_KEY || (isProd && SECRET_KEY.length < 32)) {
+    console.error('[SECURITY] COOKIE_SECRET missing or shorter than 32 chars');
+    return new NextResponse('Service unavailable', { status: 503 });
+  }
 
   const originErrorResponse = validateOrigin(request);
   if (originErrorResponse) {
@@ -187,8 +225,7 @@ export async function proxy(request: NextRequest) {
 
   const isPublicApi = PUBLIC_API_PREFIXES.some(p => pathname.startsWith(p));
   if (isPublicApi) {
-    const reqHeaders = new Headers(request.headers);
-    reqHeaders.set('x-nonce', nonce);
+    const reqHeaders = buildRequestHeaders(request, nonce);
     const res = NextResponse.next({ request: { headers: reqHeaders } });
     setSecurityHeaders(res, nonce, pathname);
     return res;
@@ -196,8 +233,7 @@ export async function proxy(request: NextRequest) {
 
   const isStaticAsset = pathname.startsWith('/_next') || pathname.startsWith('/images') || pathname === '/favicon.ico' || pathname.match(/\.(png|jpg|jpeg|gif|webp|svg|ico|css|js|woff2?)$/i);
   if (pathname.startsWith(VERIFY_PATH) || isStaticAsset) {
-    const reqHeaders = new Headers(request.headers);
-    reqHeaders.set('x-nonce', nonce);
+    const reqHeaders = buildRequestHeaders(request, nonce);
     const res = NextResponse.next({ request: { headers: reqHeaders } });
     setSecurityHeaders(res, nonce, pathname);
     return res;
@@ -215,8 +251,7 @@ export async function proxy(request: NextRequest) {
       setSecurityHeaders(res, nonce, pathname);
       return res;
     }
-    const headers = new Headers(request.headers);
-    headers.set('x-nonce', nonce);
+    const headers = buildRequestHeaders(request, nonce);
     headers.set('x-session-id', verifiedSid);
     headers.set('x-internal-auth', await signInternalToken(verifiedSid, pathname));
     const res = NextResponse.next({ request: { headers } });
@@ -229,8 +264,7 @@ export async function proxy(request: NextRequest) {
   const sessionId = request.cookies.get('__Host-session_id')?.value || request.cookies.get('session_id')?.value;
   let rawSessionId = await verifySessionWithDevice(sessionId, deviceId, ua);
 
-  const requestHeaders = new Headers(request.headers);
-  requestHeaders.set('x-nonce', nonce);
+  const requestHeaders = buildRequestHeaders(request, nonce);
 
   // FIX 3: Auto-issue session jika belum ada, daripada langsung menendang visitor ke VERIFY_PATH
   let response: NextResponse;

@@ -7,8 +7,9 @@ import { signSessionWithDevice } from '@/lib/auth';
 
 const SESSION_MAX_AGE = parseInt(process.env.SESSION_MAX_AGE || '3600');
 
+// Session IDs must come from a CSPRNG (Math.random is predictable).
 function randomHex(length: number): string {
-  return Array.from({ length }, () => Math.floor(Math.random() * 16).toString(16)).join('');
+  return randomBytes(Math.ceil(length / 2)).toString('hex').slice(0, length);
 }
 
 function applySylvorHeaders(res: NextResponse): NextResponse {
@@ -88,7 +89,8 @@ export async function POST(request: NextRequest) {
   };
 
   // Set Cookie Publik & Bersihkan Legacy Token
-  res.cookies.set('dpr', String(dpr || 1), publicOpts);
+  const safeDpr = Math.min(Math.max(Number(dpr) || 1, 0.5), 4);
+  res.cookies.set('dpr', String(safeDpr), publicOpts);
   res.cookies.delete('surt');
   res.cookies.delete('did');
   res.cookies.delete('ckstoken');

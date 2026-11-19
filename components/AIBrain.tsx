@@ -78,37 +78,9 @@ function sanitizeClientInput(text: string): string {
   return cleaned;
 }
 
-if (typeof window !== "undefined") {
-  const consoleMethods = ["log", "warn", "error", "info", "debug", "trace"];
-  consoleMethods.forEach((method) => {
-    const original = console[method as keyof Console];
-    if (typeof original === "function") {
-      Object.defineProperty(console, method, {
-        value: original,
-        writable: false,
-        configurable: false,
-      });
-    }
-  });
-
-  if (process.env.NODE_ENV === "production") {
-    Object.defineProperty(window, "eval", {
-      value: function () {
-        throw new Error("eval() diblokir untuk keamanan");
-      },
-      writable: false,
-      configurable: false,
-    });
-
-    Object.defineProperty(window, "Function", {
-      value: function () {
-        throw new Error("Function() diblokir untuk keamanan");
-      },
-      writable: false,
-      configurable: false,
-    });
-  }
-}
+// NOTE: eval/Function are blocked by the Content-Security-Policy (no
+// 'unsafe-eval' in production, see proxy.ts). Overwriting window.Function here
+// used to break every `x instanceof Function` check in third-party code.
 
 const toRgbTriplet = (colorStr: string): string | null => {
   const match = colorStr.match(/\d+(\.\d+)?/g);
@@ -254,14 +226,23 @@ export default function AIBrain() {
     };
 
     detectBg();
-    const observer = new MutationObserver(detectBg);
+    // Debounced: framer-motion writes `style` every animation frame, so an
+    // undebounced observer ran getComputedStyle ~60x/s per animated element.
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const observer = new MutationObserver(() => {
+      clearTimeout(timer);
+      timer = setTimeout(detectBg, 400);
+    });
     observer.observe(document.body, {
       attributes: true,
-      attributeFilter: ["style", "class"],
+      attributeFilter: ["class"],
       childList: true,
-      subtree: true,
+      subtree: false,
     });
-    return () => observer.disconnect();
+    return () => {
+      clearTimeout(timer);
+      observer.disconnect();
+    };
   }, []);
 
   const isLight = isLightColor(bgTriplet);
@@ -287,9 +268,10 @@ export default function AIBrain() {
   // 5. Efek untuk memperbarui konteks saat DOM berubah (hanya client)
   //    Sekarang tanpa setState langsung di body efek, melainkan di callback observer
   useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
     const observer = new MutationObserver(() => {
-      const newContext = extractProfileContext();
-      setProfileContext(newContext);
+      clearTimeout(timer);
+      timer = setTimeout(() => setProfileContext(extractProfileContext()), 800);
     });
 
     observer.observe(document.body, {
@@ -298,7 +280,10 @@ export default function AIBrain() {
       characterData: false,
     });
 
-    return () => observer.disconnect();
+    return () => {
+      clearTimeout(timer);
+      observer.disconnect();
+    };
   }, []); // tidak perlu dependency extractProfileContext karena fungsi sudah stabil
 
   const scrollToBottom = () => {

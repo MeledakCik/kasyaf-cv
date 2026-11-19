@@ -12,6 +12,7 @@ function toHex(buf: ArrayBuffer): string {
 }
 
 function fromHex(hex: string): Uint8Array {
+  if (hex.length % 2 !== 0 || !/^[0-9a-f]*$/i.test(hex)) throw new Error('invalid hex');
   const bytes = new Uint8Array(hex.length / 2);
   for (let i = 0; i < hex.length; i += 2) {
     bytes[i / 2] = parseInt(hex.slice(i, i + 2), 16);
@@ -120,7 +121,7 @@ export async function verifySessionWithDevice(
     return null;
   }
 
-  if (Date.now() > payload.exp) return null;
+  if (typeof payload?.exp !== 'number' || Date.now() > payload.exp) return null;
 
   const expectedDid = (await hmacSha256Hex(SECRET_KEY, deviceId)).slice(0, 16);
   if (!timingSafeEqualHex(payload.did, expectedDid)) return null;
@@ -137,15 +138,23 @@ export async function verifySignedData(signedValue: string | undefined): Promise
   if (!SECRET_KEY) throw new Error('COOKIE_SECRET tidak tersedia');
   if (!signedValue || !signedValue.includes('.')) return null;
 
-  try {
-    const [encoded] = signedValue.split('.');
-    const payload = JSON.parse(base64urlDecode(encoded));
-    if (payload.sid && payload.exp) return payload.sid;
-  } catch {}
-
+  // SECURITY: the signature is ALWAYS checked first. (Previously a cookie whose
+  // payload merely parsed as {sid, exp} was accepted without any HMAC check,
+  // letting anyone forge a session.)
   const [data, sig] = signedValue.split('.');
+  if (!data || !sig) return null;
   const expected = await hmacSha256Hex(SECRET_KEY, data);
-  return timingSafeEqualHex(sig, expected) ? data : null;
+  if (!timingSafeEqualHex(sig, expected)) return null;
+
+  try {
+    const payload = JSON.parse(base64urlDecode(data));
+    if (payload && typeof payload.sid === 'string' && typeof payload.exp === 'number') {
+      return Date.now() > payload.exp ? null : payload.sid;
+    }
+  } catch {
+    /* legacy format: plain signed string */
+  }
+  return data;
 }
 
 interface InternalTokenPayload {
@@ -198,8 +207,8 @@ export async function verifyInternalToken(
       return payload;
     }
 
-    // Fallback dipanggil dengan sessionId saja
-    return payload;
+    // Tanpa pathname, token tidak bisa diikat ke endpoint: tolak.
+    return null;
   } catch {
     return null;
   }

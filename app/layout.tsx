@@ -4,6 +4,7 @@ import "./globals.css";
 import { headers } from "next/headers";
 import SensorProvider from "@/components/sensor-provider";
 import { CvErrorBoundary } from "@/components/error-boundary";
+import ClientProviders from "@/components/client-providers";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -22,6 +23,7 @@ export const viewport: Viewport = {
   themeColor: "#0b0f1a",
   width: "device-width",
   initialScale: 1,
+  viewportFit: "cover",
 };
 
 export const metadata: Metadata = {
@@ -138,13 +140,15 @@ export default async function RootLayout({
           nonce={nonce}
           type="application/ld+json"
           dangerouslySetInnerHTML={{
-            __html: JSON.stringify(jsonLd),
+            __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c"),
           }}
         />
       </head>
       <body className="min-h-full flex flex-col bg-black antialiased">
         <SensorProvider />
-        <CvErrorBoundary>{children}</CvErrorBoundary>
+        <CvErrorBoundary>
+          <ClientProviders>{children}</ClientProviders>
+        </CvErrorBoundary>
       </body>
     </html>
   );
