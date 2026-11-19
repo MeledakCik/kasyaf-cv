@@ -64,7 +64,7 @@ export default function Contact() {
           <div className="text-center">
             <motion.span
               className="inline-block text-[#39e6b5] text-[11px] sm:text-xs uppercase tracking-[0.28em] mb-3 font-medium"
-              style={{ fontFamily: "'Poppins', sans-serif" }}
+              style={{ fontFamily: "var(--font-poppins), 'Poppins', sans-serif" }}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
@@ -75,7 +75,7 @@ export default function Contact() {
             
             <h2
               className="mt-3 text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-[#eaf0fb] leading-[1.1]"
-              style={{ fontFamily: "'Poppins', sans-serif" }}
+              style={{ fontFamily: "var(--font-poppins), 'Poppins', sans-serif" }}
             >
               Let&apos;s build something
               <br />
@@ -101,7 +101,7 @@ export default function Contact() {
             
             <motion.p
               className="mx-auto mt-4 sm:mt-6 max-w-2xl text-sm sm:text-base text-[#7c8aac] leading-relaxed px-4"
-              style={{ fontFamily: "'Poppins', sans-serif" }}
+              style={{ fontFamily: "var(--font-poppins), 'Poppins', sans-serif" }}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.1 }}
@@ -115,7 +115,7 @@ export default function Contact() {
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.4, delay: 0.2 }}
-              style={{ fontFamily: "'Poppins', sans-serif" }}
+              style={{ fontFamily: "var(--font-poppins), 'Poppins', sans-serif" }}
             >
               <span className="relative flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#39e6b5] opacity-75" />
@@ -133,7 +133,7 @@ export default function Contact() {
               <motion.a
                 href="mailto:kakangkasyaf@gmail.com"
                 className="inline-flex items-center gap-3 rounded-full border border-[#39e6b5]/40 bg-[#39e6b5]/10 px-8 py-4 text-xs sm:text-sm uppercase tracking-widest text-[#39e6b5] transition-all hover:bg-[#39e6b5] hover:text-[#05070d] hover:shadow-[0_0_40px_rgba(57,230,181,0.25)] group"
-                style={{ fontFamily: "'Poppins', sans-serif" }}
+                style={{ fontFamily: "var(--font-poppins), 'Poppins', sans-serif" }}
                 whileHover={{ scale: 1.03 }}
                 whileTap={{ scale: 0.95 }}
               >
@@ -158,7 +158,7 @@ export default function Contact() {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="group relative flex flex-col items-center justify-center p-6 rounded-2xl border border-[#1f2c45]/50 bg-gradient-to-br from-[#0a0f1a]/80 to-[#0a0f1a]/40 backdrop-blur-sm transition-all duration-300 hover:border-[#39e6b5]/30 hover:shadow-[0_0_40px_rgba(57,230,181,0.05)] hover:-translate-y-1"
-                style={{ fontFamily: "'Poppins', sans-serif" }}
+                style={{ fontFamily: "var(--font-poppins), 'Poppins', sans-serif" }}
                 whileHover={{ y: -4 }}
                 whileTap={{ scale: 0.98 }}
                 initial={{ opacity: 0, y: 20 }}
@@ -194,17 +194,17 @@ export default function Contact() {
             animate={{ opacity: 1 }}
             transition={{ duration: 0.6, delay: 0.5 }}
           >
-            <div className="flex items-center gap-2 text-xs text-[#7c8aac]/50" style={{ fontFamily: "'Poppins', sans-serif" }}>
+            <div className="flex items-center gap-2 text-xs text-[#7c8aac]/50" style={{ fontFamily: "var(--font-poppins), 'Poppins', sans-serif" }}>
               <MapPin className="w-3.5 h-3.5" />
               <span>Bandung, Indonesia</span>
             </div>
             <div className="hidden sm:block w-px h-4 bg-[#1f2c45]" />
-            <div className="flex items-center gap-2 text-xs text-[#7c8aac]/50" style={{ fontFamily: "'Poppins', sans-serif" }}>
+            <div className="flex items-center gap-2 text-xs text-[#7c8aac]/50" style={{ fontFamily: "var(--font-poppins), 'Poppins', sans-serif" }}>
               <Clock className="w-3.5 h-3.5" />
               <span>Response within 24 hours</span>
             </div>
             <div className="hidden sm:block w-px h-4 bg-[#1f2c45]" />
-            <div className="flex items-center gap-2 text-xs text-[#7c8aac]/50" style={{ fontFamily: "'Poppins', sans-serif" }}>
+            <div className="flex items-center gap-2 text-xs text-[#7c8aac]/50" style={{ fontFamily: "var(--font-poppins), 'Poppins', sans-serif" }}>
               <span className="relative flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#39e6b5] opacity-75" />
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-[#39e6b5]" />

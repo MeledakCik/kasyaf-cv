@@ -1,14 +1,32 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Poppins } from "next/font/google";
 import "./globals.css";
 import { headers } from "next/headers";
 import SensorProvider from "@/components/sensor-provider";
 import { CvErrorBoundary } from "@/components/error-boundary";
 import ClientProviders from "@/components/client-providers";
+import {
+  SITE_URL,
+  NAME,
+  SHORT_NAME,
+  JOB_TITLE,
+  DEFAULT_DESCRIPTION,
+  DESCRIPTION_ID,
+  KEYWORDS,
+  siteJsonLd,
+  jsonLdString,
+} from "@/lib/seo";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
+});
+
+const poppins = Poppins({
+  variable: "--font-poppins",
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700", "800"],
+  display: "swap",
 });
 
 const geistMono = Geist_Mono({
@@ -16,40 +34,31 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const SITE_URL = "https://kasyaf.id";
-const NAME = "Muhammad Kasyaf Anugrah";
-
 export const viewport: Viewport = {
-  themeColor: "#0b0f1a",
+  themeColor: "#05070d",
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
+  colorScheme: "dark",
 };
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: `${NAME} | Full Stack Developer & Cyber Security`,
+    default: `${NAME} | ${JOB_TITLE}`,
     template: `%s | ${NAME}`,
   },
-  description:
-    "Portofolio Muhammad Kasyaf Anugrah, Full Stack Developer yang fokus di front end, back end, dan cyber security. Lihat proyek, pengalaman, dan keahlian teknis di sini.",
-  keywords: [
-    "Muhammad Kasyaf Anugrah",
-    "Muhammad Kasyaf",
-    "muhammad kasyaf",
-    "kasyaf cyber security",
-    "kasyaf cv",
-    "kasyaf portfolio",
-    "full stack developer indonesia",
-    "cyber security",
-    "web developer portfolio",
-  ],
+  description: DEFAULT_DESCRIPTION,
+  keywords: KEYWORDS,
   authors: [{ name: NAME, url: SITE_URL }],
   creator: NAME,
-  applicationName: `${NAME} Portfolio`,
+  publisher: NAME,
+  applicationName: `${SHORT_NAME} Portfolio`,
+  category: "technology",
   alternates: {
-    canonical: "./",
+    canonical: "/",
+    // Single bilingual site: tell search engines it serves both audiences.
+    languages: { en: "/", "id-ID": "/", "x-default": "/" },
   },
   robots: {
     index: true,
@@ -63,28 +72,21 @@ export const metadata: Metadata = {
     },
   },
   openGraph: {
-    title: `${NAME} | Full Stack Developer & Cyber Security`,
-    description:
-      "Portofolio Muhammad Kasyaf Anugrah, Full Stack Developer yang fokus di front end, back end, dan cyber security.",
+    title: `${NAME} | ${JOB_TITLE}`,
+    description: DEFAULT_DESCRIPTION,
     url: SITE_URL,
     siteName: `${NAME} Portfolio`,
-    images: [
-      {
-        url: `${SITE_URL}/images/logo.png`,
-        width: 1200,
-        height: 630,
-        alt: `Preview Portofolio ${NAME}`,
-      },
-    ],
-    locale: "id_ID",
+    locale: "en_US",
+    alternateLocale: ["id_ID"],
     type: "profile",
+    firstName: "Muhammad Kasyaf",
+    lastName: "Anugrah",
+    username: "MeledakCik",
   },
   twitter: {
     card: "summary_large_image",
-    title: `${NAME} | Full Stack Developer & Cyber Security`,
-    description:
-      "Portofolio Muhammad Kasyaf Anugrah, Full Stack Developer yang fokus di front end, back end, dan cyber security.",
-    images: [`${SITE_URL}/images/logo.png`],
+    title: `${NAME} | ${JOB_TITLE}`,
+    description: DESCRIPTION_ID,
   },
   icons: {
     icon: "/images/logo.png",
@@ -94,33 +96,10 @@ export const metadata: Metadata = {
   verification: {
     google: "BhxoCE5pDRmhMsvBgkRdKyw8dqNYMFc4jvOfFclWLRw",
   },
-};
-
-const jsonLd = {
-  "@context": "https://schema.org",
-  "@type": "Person",
-  name: NAME,
-  url: SITE_URL,
-  image: `${SITE_URL}/images/logo.png`,
-  jobTitle: "Full Stack Developer",
-  description:
-    "Full Stack Developer yang fokus di front end, back end, dan cyber security.",
-  knowsAbout: [
-    "Full Stack Development",
-    "Front End Development",
-    "Back End Development",
-    "Cyber Security",
-  ],
-  alumniOf: {
-    "@type": "EducationalOrganization",
-    name: "Universitas Komputer Indonesia",
+  other: {
+    "geo.region": "ID-JB",
+    "geo.placename": "Bandung",
   },
-  sameAs: [
-    "https://kasyaf-cv.my.id", // Menghubungkan domain kedua agar diakui sebagai identitas yang sama
-    "https://github.com/K4K4NG",
-    "https://linkedin.com/in/muhammad-kasyaf-anugrah",
-    "https://instagram.com/kkngksyf__",
-  ],
 };
 
 export default async function RootLayout({
@@ -132,15 +111,15 @@ export default async function RootLayout({
 
   return (
     <html
-      lang="id"
-      className={`${geistSans.variable} ${geistMono.variable} h-full bg-black antialiased`}
+      lang="en"
+      className={`${geistSans.variable} ${geistMono.variable} ${poppins.variable} h-full bg-black antialiased`}
     >
       <head>
         <script
           nonce={nonce}
           type="application/ld+json"
           dangerouslySetInnerHTML={{
-            __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c"),
+            __html: jsonLdString(siteJsonLd()),
           }}
         />
       </head>

@@ -76,7 +76,11 @@ export default function Home() {
       {/* One persistent WebGL canvas for the whole flow: the "enter" transition
           is a warp of the same star field instead of fading it out and
           spinning up a second WebGL context. */}
-      <BackgroundCanvas isAbout={isTransitioning || showAbout} />
+      {/* z-0 wrapper = own stacking context, so the canvas (-z-10 inside)
+          paints above <main>'s black background instead of behind it. */}
+      <div className="fixed inset-0 z-0">
+        <BackgroundCanvas isAbout={isTransitioning || showAbout} />
+      </div>
 
       <AnimatePresence mode="wait">
         {isLoading ? (

@@ -1,16 +1,21 @@
-// app/sitemap.ts
-import { MetadataRoute } from 'next'
+import type { MetadataRoute } from "next";
+import { SITE_URL } from "@/lib/seo";
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = 'https://kasyaf.id' 
-
-  const now = new Date()
+  const lastModified = new Date();
+  const page = (path: string, priority: number, changeFrequency: "weekly" | "monthly") => ({
+    url: `${SITE_URL}${path}`,
+    lastModified,
+    changeFrequency,
+    priority,
+    alternates: { languages: { en: `${SITE_URL}${path}`, "id-ID": `${SITE_URL}${path}` } },
+  });
 
   return [
-    { url: baseUrl, lastModified: now, changeFrequency: 'monthly', priority: 1 },
-    { url: `${baseUrl}/template`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
-    { url: `${baseUrl}/project`, lastModified: now, changeFrequency: 'monthly', priority: 0.7 },
-    { url: `${baseUrl}/profile`, lastModified: now, changeFrequency: 'monthly', priority: 0.6 },
-    { url: `${baseUrl}/experience`, lastModified: now, changeFrequency: 'monthly', priority: 0.5 },
-  ]
+    page("", 1, "monthly"),
+    page("/profile", 0.9, "weekly"),
+    page("/experience", 0.8, "monthly"),
+    page("/template", 0.6, "monthly"),
+    page("/project", 0.4, "monthly"),
+  ];
 }

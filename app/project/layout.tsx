@@ -1,5 +1,6 @@
 // app/project/layout.tsx
 import { Poppins } from "next/font/google";
+import type { Metadata } from "next";
 import Sidebar from "./Sidebar";
 import { getProjectData } from "@/lib/projectData";
 
@@ -7,6 +8,12 @@ const poppins = Poppins({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700", "800", "900"],
 });
+
+export const metadata: Metadata = {
+  title: "Project Lab",
+  description: "Experiments and work-in-progress projects by Muhammad Kasyaf Anugrah.",
+  alternates: { canonical: "/project" },
+};
 
 export default function ProjectLayout({
   children,

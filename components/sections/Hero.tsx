@@ -3,7 +3,8 @@
 import { motion } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, GitGraph, Link2OffIcon, Mail } from "lucide-react";
+import { ArrowRight, Mail, MapPin } from "lucide-react";
+import { FaGithub, FaLinkedinIn } from "react-icons/fa6";
 
 export default function Hero() {
   return (
@@ -26,7 +27,7 @@ export default function Hero() {
               </span>
               <span
                 className="text-[11px] text-[#39e6b5]/80 tracking-[0.2em] uppercase"
-                style={{ fontFamily: "'Poppins', sans-serif" }}
+                style={{ fontFamily: "var(--font-poppins), 'Poppins', sans-serif" }}
               >
                 Available for work
               </span>
@@ -37,7 +38,7 @@ export default function Hero() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.7, delay: 0.1, ease: "easeOut" }}
               className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-bold leading-[1.05] mb-3"
-              style={{ fontFamily: "'Poppins', sans-serif" }}
+              style={{ fontFamily: "var(--font-poppins), 'Poppins', sans-serif" }}
             >
               <span className="text-[#eaf0fb]">Muhammad</span>
               <br />
@@ -51,7 +52,7 @@ export default function Hero() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.2, ease: "easeOut" }}
               className="text-base sm:text-lg text-[#7c8aac] mb-2 max-w-lg leading-relaxed"
-              style={{ fontFamily: "'Poppins', sans-serif" }}
+              style={{ fontFamily: "var(--font-poppins), 'Poppins', sans-serif" }}
             >
               Full Stack Developer &amp; Cyber Security Enthusiast
             </motion.p>
@@ -61,13 +62,14 @@ export default function Hero() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.25, ease: "easeOut" }}
               className="text-sm text-[#7c8aac]/60 max-w-lg leading-relaxed"
-              style={{ fontFamily: "'Poppins', sans-serif" }}
+              style={{ fontFamily: "var(--font-poppins), 'Poppins', sans-serif" }}
             >
-              Building secure, scalable, and beautiful web experiences
+              I build secure products end to end: Android, iOS and Windows apps, cloud
+              platforms and the web, with security designed in from day one.
               <br />
-              <span className="text-xs">
-                B.Tech in Information Technology · Universitas Komputer
-                Indonesia
+              <span className="mt-2 inline-flex items-center gap-1.5 text-xs">
+                <MapPin className="h-3.5 w-3.5" aria-hidden="true" />
+                Bandung, Indonesia · Information Technology, Universitas Komputer Indonesia
               </span>
             </motion.p>
 
@@ -78,17 +80,17 @@ export default function Hero() {
               className="flex flex-wrap items-center justify-start gap-2 mt-5 mb-8"
             >
               {[
-                "Full Stack",
-                "Front End",
-                "Back End",
+                "Next.js",
+                "TypeScript",
+                "Kotlin",
+                "C# .NET",
+                "Cloud & DevOps",
                 "Cyber Security",
-                "REST APIs",
-                "Bug Tracking",
               ].map((tag) => (
                 <span
                   key={tag}
                   className="px-3 py-1 text-[11px] rounded-full border border-[#1f2c45]/40 bg-[#101b30]/30 text-[#7c8aac]/80 backdrop-blur-sm"
-                  style={{ fontFamily: "'Poppins', sans-serif" }}
+                  style={{ fontFamily: "var(--font-poppins), 'Poppins', sans-serif" }}
                 >
                   {tag}
                 </span>
@@ -102,19 +104,19 @@ export default function Hero() {
               className="flex flex-wrap items-center justify-start gap-4"
             >
               <Link
-                href="#about"
+                href="#projects"
                 className="group inline-flex items-center gap-2 px-8 py-3 rounded-full bg-[#39e6b5] text-[#05070d] text-sm font-medium transition-all hover:bg-[#39e6b5]/90 hover:shadow-[0_0_30px_rgba(57,230,181,0.2)]"
-                style={{ fontFamily: "'Poppins', sans-serif" }}
+                style={{ fontFamily: "var(--font-poppins), 'Poppins', sans-serif" }}
               >
-                About Me
+                View Projects
                 <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
               </Link>
               <Link
-                href="#projects"
+                href="#contact"
                 className="group inline-flex items-center gap-2 px-8 py-3 rounded-full border border-[#1f2c45]/40 text-[#eaf0fb] text-sm transition-all hover:border-[#39e6b5]/30 hover:text-[#39e6b5] hover:bg-[#39e6b5]/5"
-                style={{ fontFamily: "'Poppins', sans-serif" }}
+                style={{ fontFamily: "var(--font-poppins), 'Poppins', sans-serif" }}
               >
-                View Projects
+                Get in Touch
               </Link>
             </motion.div>
 
@@ -125,9 +127,9 @@ export default function Hero() {
               className="flex items-center justify-start gap-4 mt-8"
             >
               {[
-                { icon: GitGraph, href: "https://github.com/K4K4NG", label: "GitHub" },
+                { icon: FaGithub, href: "https://github.com/MeledakCik", label: "GitHub" },
                 {
-                  icon: Link2OffIcon,
+                  icon: FaLinkedinIn,
                   href: "https://www.linkedin.com/in/muhammad-kasyaf-anugrah/",
                   label: "LinkedIn",
                 },
@@ -138,12 +140,12 @@ export default function Hero() {
                   href={social.href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="p-2 rounded-full border border-[#1f2c45]/30 text-[#7c8aac]/60 hover:text-[#39e6b5] hover:border-[#39e6b5]/30 transition-all duration-300"
+                  className="p-2.5 rounded-full border border-[#1f2c45]/50 text-[#9fb0cf] hover:text-[#39e6b5] hover:border-[#39e6b5]/30 transition-all duration-300"
                   whileHover={{ y: -2 }}
                   whileTap={{ scale: 0.95 }}
                   aria-label={social.label}
                 >
-                  <social.icon className="w-5 h-5" />
+                  <social.icon className="w-[18px] h-[18px]" aria-hidden="true" />
                 </motion.a>
               ))}
             </motion.div>
@@ -180,7 +182,7 @@ export default function Hero() {
                 <div className="w-full h-full rounded-2xl overflow-hidden bg-[#05070d]">
                   <Image
                     src="/images/profile.png"
-                    alt="Muhammad Kasyaf Profile"
+                    alt="Muhammad Kasyaf Anugrah, Full Stack Developer from Bandung, Indonesia"
                     width={500}
                     height={500}
                     className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
@@ -204,7 +206,7 @@ export default function Hero() {
               >
                 <span
                   className="text-[11px] text-[#39e6b5]/70"
-                  style={{ fontFamily: "'Poppins', sans-serif" }}
+                  style={{ fontFamily: "var(--font-poppins), 'Poppins', sans-serif" }}
                 >
                   🚀 5+ Years
                 </span>
@@ -218,7 +220,7 @@ export default function Hero() {
               >
                 <span
                   className="text-[11px] text-[#7c8aac]/70"
-                  style={{ fontFamily: "'Poppins', sans-serif" }}
+                  style={{ fontFamily: "var(--font-poppins), 'Poppins', sans-serif" }}
                 >
                   <span className="text-[#39e6b5]/60">✦</span> 30+ Projects
                 </span>

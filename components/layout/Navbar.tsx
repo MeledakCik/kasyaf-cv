@@ -6,7 +6,7 @@ import Image from 'next/image';
 import { Menu, X } from 'lucide-react';
 
 const navItems = [
-  { label: 'COVER', href: '/' },
+  { label: 'HOME', href: '/' },
   { label: 'ABOUT', href: '#about' },
   { label: 'SKILLS', href: '#skills' },
   { label: 'EXPERIENCE', href: '#experience' },
@@ -56,7 +56,7 @@ export default function Navbar() {
             </div>
             <span 
               className="text-xs sm:text-sm font-bold tracking-[0.15em] sm:tracking-[0.2em] text-[#39e6b5] hover:text-[#39e6b5]/80 transition-colors hidden xs:inline"
-              style={{ fontFamily: "'Poppins', sans-serif" }}
+              style={{ fontFamily: "var(--font-poppins), 'Poppins', sans-serif" }}
             >
               KASYAF
             </span>
@@ -67,7 +67,7 @@ export default function Navbar() {
                 key={item.label}
                 href={item.href}
                 className="text-[10px] lg:text-sm text-[#7c8aac] hover:text-[#39e6b5] transition-colors tracking-wider font-medium whitespace-nowrap"
-                style={{ fontFamily: "'Poppins', sans-serif" }}
+                style={{ fontFamily: "var(--font-poppins), 'Poppins', sans-serif" }}
               >
                 {item.label}
               </Link>
@@ -76,7 +76,7 @@ export default function Navbar() {
           <Link
             href="#contact"
             className="hidden md:inline-flex px-4 py-1.5 lg:px-5 lg:py-1.5 border border-[#39e6b5]/20 text-[#39e6b5] rounded-full text-[10px] lg:text-xs tracking-wider hover:bg-[#39e6b5]/10 transition-all hover:border-[#39e6b5] flex-shrink-0"
-            style={{ fontFamily: "'Poppins', sans-serif" }}
+            style={{ fontFamily: "var(--font-poppins), 'Poppins', sans-serif" }}
           >
             HIRE ME
           </Link>
@@ -105,7 +105,7 @@ export default function Navbar() {
                       href={item.href}
                       onClick={() => setIsOpen(false)}
                       className="text-base text-[#7c8aac] hover:text-[#39e6b5] transition-colors tracking-wider font-medium py-3 px-4 hover:bg-[#39e6b5]/5 rounded-lg text-left"
-                      style={{ fontFamily: "'Poppins', sans-serif" }}
+                      style={{ fontFamily: "var(--font-poppins), 'Poppins', sans-serif" }}
                     >
                       {item.label}
                     </Link>
@@ -116,7 +116,7 @@ export default function Navbar() {
                     href="#contact"
                     onClick={() => setIsOpen(false)}
                     className="block w-full px-6 py-3 border border-[#39e6b5]/30 text-[#39e6b5] rounded-lg text-center hover:bg-[#39e6b5]/10 transition-all"
-                    style={{ fontFamily: "'Poppins', sans-serif" }}
+                    style={{ fontFamily: "var(--font-poppins), 'Poppins', sans-serif" }}
                   >
                     HIRE ME
                   </Link>

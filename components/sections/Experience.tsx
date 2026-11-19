@@ -29,13 +29,13 @@ export default function Experience() {
       <Reveal>
         <span
           className="text-[#39e6b5] text-xs uppercase tracking-[0.28em]"
-          style={{ fontFamily: "'Poppins', sans-serif" }}
+          style={{ fontFamily: "var(--font-poppins), 'Poppins', sans-serif" }}
         >
           Experience
         </span>
         <h2
           className="mt-4 text-3xl font-semibold text-[#eaf0fb] sm:text-4xl"
-          style={{ fontFamily: "'Poppins', sans-serif" }}
+          style={{ fontFamily: "var(--font-poppins), 'Poppins', sans-serif" }}
         >
           Where the time went
         </h2>
@@ -51,25 +51,25 @@ export default function Experience() {
             <span className="absolute -left-[calc(2rem+5px)] top-1.5 h-2.5 w-2.5 rounded-full bg-[#39e6b5] shadow-[0_0_12px_2px_rgba(57,230,181,0.6)] sm:-left-[calc(3rem+5px)]" />
             <p
               className="text-xs uppercase tracking-widest text-[#39e6b5]"
-              style={{ fontFamily: "'Poppins', sans-serif" }}
+              style={{ fontFamily: "var(--font-poppins), 'Poppins', sans-serif" }}
             >
               {r.period}
             </p>
             <h3
               className="mt-2 text-xl font-semibold text-[#eaf0fb]"
-              style={{ fontFamily: "'Poppins', sans-serif" }}
+              style={{ fontFamily: "var(--font-poppins), 'Poppins', sans-serif" }}
             >
               {r.role}
             </h3>
             <p
               className="mt-0.5 text-xs text-[#7c8aac]"
-              style={{ fontFamily: "'Poppins', sans-serif" }}
+              style={{ fontFamily: "var(--font-poppins), 'Poppins', sans-serif" }}
             >
               {r.org}
             </p>
             <p
               className="mt-3 max-w-2xl text-[#7c8aac]"
-              style={{ fontFamily: "'Poppins', sans-serif" }}
+              style={{ fontFamily: "var(--font-poppins), 'Poppins', sans-serif" }}
             >
               {r.desc}
             </p>

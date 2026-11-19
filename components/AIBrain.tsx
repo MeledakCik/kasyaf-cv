@@ -1,706 +1,591 @@
 "use client";
 
-import { useCallback, useState, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
+import { ArrowUp, RotateCcw, Sparkles, Square, X } from "lucide-react";
+
+/*
+ * Portfolio AI assistant.
+ * - Streams plain text from /api/chat-ai (server owns the CV context).
+ * - Renders a small, safe Markdown subset as React elements (no innerHTML).
+ * - Sends the last few turns so follow-up questions work.
+ *
+ * eval/Function are blocked by the CSP (no 'unsafe-eval' in production,
+ * see proxy.ts), so nothing here monkey-patches globals.
+ */
 
 interface ChatMessage {
   role: "user" | "assistant";
   content: string;
 }
 
-interface ProfileContext {
-  skills: string[];
-  experience: string[];
-  projects: string[];
-  about: string;
-  contact?: string;
-  summary?: string;
-}
-
-const PORTFOLIO_KEYS = [
-  "TypeScript",
-  "React",
-  "Next.js",
-  "Node.js",
-  "WebGPU",
-  "fintech",
-  "e-commerce",
-  "frontend",
-  "embedding",
-  "HNSW",
-  "RAG",
-  "information retrieval",
-  "skill",
-  "pengalaman",
-  "proyek",
-  "pendidikan",
-  "kontak",
-  "engineering",
-  "vektor",
-  "algoritma",
-  "matriks",
-  "arsitektur",
+const SUGGESTIONS = [
+  "Ceritakan tentang DepUp Office",
+  "What is depup.cloud?",
+  "Apa saja skill utama Kasyaf?",
+  "How can I hire Kasyaf?",
 ];
 
-const sanitizeText = (text: string): string => {
-  if (!text) return "";
-  let sanitized = text.replace(
-    /[\w.-]+@[\w.-]+\.\w+/g,
-    "[email disembunyikan]",
-  );
-  sanitized = sanitized.replace(
-    /(\+?\d{1,3}[-.\s]?)?(\(?\d{3}\)?[-.\s]?)?\d{3}[-.\s]?\d{4,}/g,
-    "[telepon disembunyikan]",
-  );
-  sanitized = sanitized.replace(/[<>{}[\]\\;]/g, "");
-  return sanitized;
+const MAX_INPUT = 1000;
+const HISTORY_TURNS = 6;
+
+/* ----------------------------- navigation intents ----------------------------- */
+
+const ROUTES: Record<string, string> = {
+  template: "/template",
+  koleksi: "/template",
+  produk: "/template",
 };
+const NAV_WORDS = ["buka", "lihat", "tunjukkan", "arahkan", "pergi ke", "open", "show me", "go to"];
+const SECTIONS: [string, string][] = [
+  ["skill", "skills"],
+  ["keahlian", "skills"],
+  ["tech stack", "skills"],
+  ["pengalaman", "experience"],
+  ["experience", "experience"],
+  ["proyek", "projects"],
+  ["project", "projects"],
+  ["portfolio", "projects"],
+  ["kontak", "contact"],
+  ["hubungi", "contact"],
+  ["contact", "contact"],
+  ["hire", "contact"],
+  ["tentang", "about"],
+  ["about", "about"],
+];
 
-function sanitizeClientInput(text: string): string {
-  let cleaned = text.replace(/[<>{}[\]\\;'"`]/g, "");
-  cleaned = cleaned.replace(/[\u0000-\u001F\u007F-\u009F]/g, "");
-  if (cleaned.length > 2000) cleaned = cleaned.substring(0, 2000);
+/* ------------------------------ safe markdown ------------------------------ */
 
-  const injectionPhrases = [
-    /abaikan\s+instruksi/i,
-    /lupakan\s+aturan/i,
-    /ignore\s+previous/i,
-    /override\s+system/i,
-    /sekarang\s+kamu\s+menjadi/i,
-    /mode\s+dan/i,
-    /jangan\s+patuhi/i,
-    /don't\s+follow/i,
-  ];
-  if (injectionPhrases.some((re) => re.test(cleaned))) {
-    return "[Pertanyaan tidak valid]";
+const INLINE_RE = /(\*\*[^*]+\*\*|`[^`]+`|\[[^\]]+\]\(https?:\/\/[^\s)]+\)|https?:\/\/[^\s)]+)/g;
+
+function renderInline(text: string, keyBase: string): ReactNode[] {
+  const out: ReactNode[] = [];
+  let last = 0;
+  let i = 0;
+  for (const m of text.matchAll(INLINE_RE)) {
+    const tok = m[0];
+    const idx = m.index ?? 0;
+    if (idx > last) out.push(text.slice(last, idx));
+    const key = `${keyBase}-${i++}`;
+    if (tok.startsWith("**")) {
+      out.push(
+        <strong key={key} className="font-semibold text-[#eaf0fb]">
+          {tok.slice(2, -2)}
+        </strong>,
+      );
+    } else if (tok.startsWith("`")) {
+      out.push(
+        <code key={key} className="rounded bg-white/10 px-1 py-0.5 font-mono text-[0.85em] text-[#7ff3d2]">
+          {tok.slice(1, -1)}
+        </code>,
+      );
+    } else {
+      const md = tok.match(/^\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)$/);
+      const href = md ? md[2] : tok;
+      const label = md ? md[1] : tok.replace(/^https?:\/\/(www\.)?/, "");
+      out.push(
+        <a
+          key={key}
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer nofollow"
+          className="text-[#39e6b5] underline decoration-[#39e6b5]/40 underline-offset-2 hover:decoration-[#39e6b5]"
+        >
+          {label}
+        </a>,
+      );
+    }
+    last = idx + tok.length;
   }
-  return cleaned;
+  if (last < text.length) out.push(text.slice(last));
+  return out;
 }
 
-// NOTE: eval/Function are blocked by the Content-Security-Policy (no
-// 'unsafe-eval' in production, see proxy.ts). Overwriting window.Function here
-// used to break every `x instanceof Function` check in third-party code.
+function Markdown({ text }: { text: string }) {
+  const blocks: ReactNode[] = [];
+  const lines = text.replace(/\r/g, "").split("\n");
+  let list: { ordered: boolean; items: string[] } | null = null;
+  let para: string[] = [];
 
-const toRgbTriplet = (colorStr: string): string | null => {
-  const match = colorStr.match(/\d+(\.\d+)?/g);
-  if (!match || match.length < 3) return null;
-  return `${match[0]}, ${match[1]}, ${match[2]}`;
-};
-
-const isLightColor = (rgbTriplet: string): boolean => {
-  const [r, g, b] = rgbTriplet.split(",").map((n) => parseFloat(n.trim()));
-  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-  return luminance > 0.55;
-};
-
-const DEFAULT_BG_TRIPLET = "15, 23, 42";
-
-// Default context untuk server-side
-const DEFAULT_PROFILE_CONTEXT: ProfileContext = {
-  skills: [],
-  experience: [],
-  projects: [],
-  about: "",
-  contact: "",
-  summary: "Pemilik portofolio memiliki berbagai keahlian. Tanyakan sesuatu tentang pemilik.",
-};
-
-// --------------------------------------------------------------
-// Fungsi extractProfileContext dipindahkan ke luar komponen (pure, tidak perlu useCallback)
-// --------------------------------------------------------------
-function extractProfileContext(): ProfileContext {
-  // Guard: jika tidak ada document, return default
-  if (typeof document === "undefined") {
-    return DEFAULT_PROFILE_CONTEXT;
-  }
-
-  const skills: string[] = [];
-  const experience: string[] = [];
-  const projects: string[] = [];
-  let about = "";
-  let contact = "";
-
-  const skillsSection = document.querySelector("#skills");
-  if (skillsSection) {
-    const skillItems = skillsSection.querySelectorAll("li, .skill-item, span");
-    skillItems.forEach((item) => {
-      const text = item.textContent?.trim();
-      if (text && text.length > 1 && text.length < 50) {
-        skills.push(text);
-      }
-    });
-  }
-
-  const experienceSection = document.querySelector("#experience");
-  if (experienceSection) {
-    const roles = experienceSection.querySelectorAll("h3, p");
-    roles.forEach((item) => {
-      const text = item.textContent?.trim();
-      if (text && text.length > 10) {
-        experience.push(text);
-      }
-    });
-  }
-
-  const projectsSection = document.querySelector("#projects");
-  if (projectsSection) {
-    const projectItems = projectsSection.querySelectorAll("h3, .project-name, a");
-    projectItems.forEach((item) => {
-      const text = item.textContent?.trim();
-      if (text && text.length > 3 && text.length < 100) {
-        projects.push(text);
-      }
-    });
-  }
-
-  const aboutSection = document.querySelector("#about");
-  if (aboutSection) {
-    const aboutParagraph = aboutSection.querySelector("p");
-    const aboutText = aboutParagraph?.textContent || aboutSection.textContent || "";
-    about = sanitizeText(aboutText.replace(/\s+/g, " ").trim().substring(0, 800));
-  }
-
-  const contactSection = document.querySelector("#contact");
-  if (contactSection) {
-    const contactText = contactSection.textContent?.trim() || "";
-    contact = sanitizeText(contactText.substring(0, 300));
-  }
-
-  const allSkills = [...new Set(skills)].map((s) => s.toLowerCase());
-
-  return {
-    skills: allSkills.slice(0, 10),
-    experience: [...new Set(experience)].map((e) => sanitizeText(e)),
-    projects: [...new Set(projects)].map((p) => sanitizeText(p)),
-    about,
-    contact: contact || "Informasi kontak dapat dilihat di bagian kontak halaman.",
-    summary: `Pemilik portofolio memiliki total ${allSkills.length} keahlian. Berikan jawaban yang detail dan bermanfaat. Jika ditanya tentang keahlian, sebutkan beberapa contoh utama dan jelaskan konteks penggunaannya. Jangan menyebutkan semua keahlian sekaligus.`,
+  const flushPara = () => {
+    if (para.length) {
+      const k = `p${blocks.length}`;
+      blocks.push(
+        <p key={k} className="whitespace-pre-wrap">
+          {renderInline(para.join("\n"), k)}
+        </p>,
+      );
+      para = [];
+    }
   };
+  const flushList = () => {
+    if (list) {
+      const k = `l${blocks.length}`;
+      const items = list.items.map((it, j) => <li key={`${k}-${j}`}>{renderInline(it, `${k}-${j}`)}</li>);
+      blocks.push(
+        list.ordered ? (
+          <ol key={k} className="list-decimal space-y-1 pl-5 marker:text-[#7c8aac]">
+            {items}
+          </ol>
+        ) : (
+          <ul key={k} className="list-disc space-y-1 pl-5 marker:text-[#39e6b5]">
+            {items}
+          </ul>
+        ),
+      );
+      list = null;
+    }
+  };
+
+  for (const raw of lines) {
+    const line = raw.trimEnd();
+    const bullet = line.match(/^\s*[-*•]\s+(.*)$/);
+    const numbered = line.match(/^\s*\d+[.)]\s+(.*)$/);
+    const heading = line.match(/^#{1,4}\s+(.*)$/);
+    if (bullet || numbered) {
+      flushPara();
+      const ordered = !!numbered;
+      if (!list || list.ordered !== ordered) {
+        flushList();
+        list = { ordered, items: [] };
+      }
+      list.items.push((bullet ?? numbered)![1]);
+    } else if (heading) {
+      flushPara();
+      flushList();
+      const k = `h${blocks.length}`;
+      blocks.push(
+        <p key={k} className="font-semibold text-[#eaf0fb]">
+          {renderInline(heading[1], k)}
+        </p>,
+      );
+    } else if (!line.trim()) {
+      flushPara();
+      flushList();
+    } else {
+      flushList();
+      para.push(line);
+    }
+  }
+  flushPara();
+  flushList();
+  return <div className="space-y-2.5">{blocks}</div>;
 }
+
+/* --------------------------------- component -------------------------------- */
 
 export default function AIBrain() {
+  const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [isOpen, setIsOpen] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [lastQuery, setLastQuery] = useState<string | null>(null);
+
   const router = useRouter();
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const abortRef = useRef<AbortController | null>(null);
+  const fabRef = useRef<HTMLButtonElement>(null);
 
-  // --------------------------------------------------------------
-  // STATE profileContext diinisialisasi dengan lazy initializer
-  // Hanya berjalan di client (karena cek typeof window)
-  // --------------------------------------------------------------
-  const [profileContext, setProfileContext] = useState<ProfileContext>(() => {
-    if (typeof window === "undefined") {
-      return DEFAULT_PROFILE_CONTEXT;
-    }
-    return extractProfileContext();
-  });
-
-  // 4. Background detection (sudah pakai useEffect, jadi aman)
-  const [bgTriplet, setBgTriplet] = useState<string>("15, 23, 42");
-
+  // Keep the newest message in view while streaming.
   useEffect(() => {
-    const detectBg = () => {
-      if (typeof document === "undefined") return;
-      const candidates = [
-        document.querySelector("#profile"),
-        document.querySelector("#about"),
-        document.querySelector("main"),
-        document.body,
-      ].filter(Boolean) as Element[];
+    const el = scrollRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [messages, isGenerating, errorMsg]);
 
-      for (const el of candidates) {
-        const bg = getComputedStyle(el).backgroundColor;
-        if (bg && bg !== "rgba(0, 0, 0, 0)" && bg !== "transparent") {
-          const triplet = toRgbTriplet(bg);
-          if (triplet) {
-            setBgTriplet(triplet);
-            return;
-          }
-        }
+  // Focus management + Esc to close.
+  useEffect(() => {
+    if (!isOpen) return;
+    const t = setTimeout(() => inputRef.current?.focus(), 150);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setIsOpen(false);
+        fabRef.current?.focus();
       }
-      setBgTriplet(DEFAULT_BG_TRIPLET);
     };
-
-    detectBg();
-    // Debounced: framer-motion writes `style` every animation frame, so an
-    // undebounced observer ran getComputedStyle ~60x/s per animated element.
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    const observer = new MutationObserver(() => {
-      clearTimeout(timer);
-      timer = setTimeout(detectBg, 400);
-    });
-    observer.observe(document.body, {
-      attributes: true,
-      attributeFilter: ["class"],
-      childList: true,
-      subtree: false,
-    });
+    window.addEventListener("keydown", onKey);
     return () => {
-      clearTimeout(timer);
-      observer.disconnect();
+      clearTimeout(t);
+      window.removeEventListener("keydown", onKey);
     };
-  }, []);
+  }, [isOpen]);
 
-  const isLight = isLightColor(bgTriplet);
-  const cardBg = `rgba(${bgTriplet}, 0.85)`;
-  const headerBorder = isLight ? "border-black/10" : "border-white/10";
-  const textPrimary = isLight ? "#1c1c1e" : "#f5f5f7";
-  const textSecondary = isLight
-    ? "rgba(28,28,30,0.55)"
-    : "rgba(245,245,247,0.55)";
-  const emptyStateBorder = isLight ? "border-black/15" : "border-white/15";
-  const emptyStateBg = isLight ? "rgba(0,0,0,0.03)" : "rgba(255,255,255,0.04)";
-  const assistantBubbleBg = isLight
-    ? "rgba(0,0,0,0.06)"
-    : "rgba(255,255,255,0.10)";
-  const assistantBubbleBorder = isLight
-    ? "rgba(0,0,0,0.06)"
-    : "rgba(255,255,255,0.08)";
-  const inputBg = isLight ? "rgba(0,0,0,0.05)" : "rgba(255,255,255,0.08)";
-  const scrollbarTrack = isLight
-    ? "rgba(0,0,0,0.06)"
-    : "rgba(255,255,255,0.06)";
+  useEffect(() => () => abortRef.current?.abort(), []);
 
-  // 5. Efek untuk memperbarui konteks saat DOM berubah (hanya client)
-  //    Sekarang tanpa setState langsung di body efek, melainkan di callback observer
-  useEffect(() => {
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    const observer = new MutationObserver(() => {
-      clearTimeout(timer);
-      timer = setTimeout(() => setProfileContext(extractProfileContext()), 800);
-    });
-
-    observer.observe(document.body, {
-      childList: true,
-      subtree: true,
-      characterData: false,
-    });
-
-    return () => {
-      clearTimeout(timer);
-      observer.disconnect();
-    };
-  }, []); // tidak perlu dependency extractProfileContext karena fungsi sudah stabil
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
-  const autoNavigateToSection = useCallback(
-    (userMessage: string) => {
-      const message = userMessage.toLowerCase().replace(/[?.,]/g, "");
-
-      const routeMaps: Record<string, string> = {
-        template: "/template",
-        koleksi: "/template",
-        produk: "/template",
-        product: "/template",
-        project: "/project",
-        proyek: "/project",
-      };
-      for (const [keyword, path] of Object.entries(routeMaps)) {
-        if (message.includes(keyword)) {
-          const navWords = ["buka", "lihat", "ke", "tunjukkan", "arahkan", "pergi"];
-          if (navWords.some((w) => message.includes(w))) {
+  const detectIntent = useCallback(
+    (query: string): string | null => {
+      const q = query.toLowerCase();
+      if (NAV_WORDS.some((w) => q.includes(w))) {
+        for (const [kw, path] of Object.entries(ROUTES)) {
+          if (q.includes(kw)) {
             router.push(path);
-            return keyword;
+            return null;
           }
         }
       }
-
-      const sectionMaps: Record<string, string> = {
-        skill: "skills",
-        keahlian: "skills",
-        teknologi: "skills",
-        "tech stack": "skills",
-        pengalaman: "experience",
-        experience: "experience",
-        kerja: "experience",
-        proyek: "projects",
-        project: "projects",
-        portfolio: "projects",
-        kontak: "contact",
-        hubungi: "contact",
-        contact: "contact",
-        tentang: "about",
-        about: "about",
-        siapa: "about",
-        profile: "profile",
-        profil: "profile",
-      };
-
-      let foundSection: string | null = null;
-      for (const [keyword, sectionId] of Object.entries(sectionMaps)) {
-        if (message.includes(keyword)) {
-          foundSection = sectionId;
-          break;
-        }
-      }
-
-      if (!foundSection) return null;
-
-      const section = document.querySelector(`#${foundSection}`);
-      if (section) {
-        setTimeout(() => {
-          section.scrollIntoView({ behavior: "smooth", block: "start" });
-        }, 300);
-        return foundSection;
-      }
-
-      return null;
+      const hit = SECTIONS.find(([kw]) => q.includes(kw));
+      if (!hit) return null;
+      const el = document.getElementById(hit[1]);
+      if (el) setTimeout(() => el.scrollIntoView({ behavior: "smooth", block: "start" }), 300);
+      return hit[1];
     },
     [router],
   );
 
-  const handleSubmit = useCallback(
-  async (e: React.FormEvent) => {
-    e.preventDefault();
-    const rawQuery = input.trim();
-    if (!rawQuery || isGenerating) return;
-    const query = rawQuery.slice(0, 2000);
-    setInput("");
-    const detectedSection = autoNavigateToSection(query);
-    setMessages((prev) => [...prev, { role: "user", content: query }]);
-    setIsGenerating(true);
-    setErrorMsg(null);
+  const send = useCallback(
+    async (raw: string) => {
+      const query = raw.trim().slice(0, MAX_INPUT);
+      if (!query || isGenerating) return;
 
-    try {
-      const response = await fetch("/api/chat-ai", {
-        method: "POST",
-        headers: { 
-          "Content-Type": "application/json",
-          "Accept": "application/json, text/plain, */*" // FIX 1: Lolos dari isBot()
-        },
-        body: JSON.stringify({
-          message: query,
-          detectedSection,
-          _ts: Date.now(),
-          _nonce: crypto.randomUUID(),
-        }),
-      });
+      const history = messages
+        .filter((m) => m.content.trim())
+        .slice(-HISTORY_TURNS)
+        .map((m) => ({ role: m.role, content: m.content.slice(0, 1200) }));
 
-      // FIX 2: Parsing error aman tanpa bikin SyntaxError JSON
-      if (!response.ok) {
-        const errorText = await response.text();
-        let errorMessage = errorText;
-        try {
-          const errorJson = JSON.parse(errorText);
-          errorMessage = errorJson.error || errorText;
-        } catch {
-          // Tetap gunakan errorText jika bukan JSON
-        }
-        
-        if (response.status === 401) throw new Error("Sesi kadaluarsa / Unauthorized. Silakan refresh halaman.");
-        if (response.status === 403) {
-          throw new Error(
-            /origin/i.test(errorMessage)
-              ? "Akses ditolak: domain ini belum diizinkan (cek pengaturan origin)."
-              : "Akses ditolak oleh Security Shield. Coba refresh halaman.",
-          );
-        }
-        if (response.status === 429) throw new Error("Terlalu banyak pesan. Tunggu sebentar lalu coba lagi.");
-        if (response.status === 502 || response.status === 504) throw new Error("Layanan AI sedang tidak tersedia. Coba lagi nanti.");
-        throw new Error(errorMessage || `Error ${response.status}`);
-      }
+      setInput("");
+      setErrorMsg(null);
+      setLastQuery(query);
+      setMessages((prev) => [...prev, { role: "user", content: query }]);
+      setIsGenerating(true);
 
-      setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
-      const reader = response.body!.getReader();
-      const decoder = new TextDecoder();
-      
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        const chunk = decoder.decode(value);
-        setMessages((prev) => {
-          const last = prev[prev.length - 1];
-          const updated = [...prev];
-          updated[updated.length - 1] = {
-            ...last,
-            content: last.content + chunk,
-          };
-          return updated;
+      const detectedSection = detectIntent(query);
+      const controller = new AbortController();
+      abortRef.current = controller;
+
+      try {
+        const response = await fetch("/api/chat-ai", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Accept: "text/plain, application/json, */*" },
+          body: JSON.stringify({
+            message: query,
+            history,
+            detectedSection,
+            _ts: Date.now(),
+            _nonce: crypto.randomUUID(),
+          }),
+          signal: controller.signal,
         });
+
+        if (!response.ok || !response.body) {
+          const text = await response.text().catch(() => "");
+          let serverMsg = text;
+          try {
+            serverMsg = JSON.parse(text).error ?? text;
+          } catch {
+            /* plain text */
+          }
+          switch (response.status) {
+            case 401:
+              throw new Error("Sesi kedaluwarsa. Muat ulang halaman lalu coba lagi.");
+            case 403:
+              throw new Error(
+                /origin/i.test(serverMsg)
+                  ? "Permintaan ditolak karena domain ini belum diizinkan."
+                  : "Permintaan diblokir oleh proteksi keamanan. Muat ulang halaman lalu coba lagi.",
+              );
+            case 429:
+              throw new Error("Terlalu banyak pesan. Tunggu sebentar lalu coba lagi.");
+            case 502:
+            case 504:
+              throw new Error("Layanan AI sedang tidak tersedia. Coba lagi sebentar lagi.");
+            default:
+              throw new Error("Terjadi kesalahan. Coba lagi.");
+          }
+        }
+
+        setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          const chunk = decoder.decode(value, { stream: true });
+          if (!chunk) continue;
+          setMessages((prev) => {
+            const next = prev.slice();
+            const last = next[next.length - 1];
+            next[next.length - 1] = { ...last, content: last.content + chunk };
+            return next;
+          });
+        }
+      } catch (err) {
+        if ((err as Error)?.name === "AbortError") return;
+        // Drop an empty assistant bubble if the stream failed before any text.
+        setMessages((prev) =>
+          prev.length && prev[prev.length - 1].role === "assistant" && !prev[prev.length - 1].content
+            ? prev.slice(0, -1)
+            : prev,
+        );
+        setErrorMsg(err instanceof Error ? err.message : "Terjadi kesalahan. Coba lagi.");
+      } finally {
+        abortRef.current = null;
+        setIsGenerating(false);
       }
-    } catch (err: unknown) {
-      setErrorMsg(err instanceof Error ? err.message : "Terjadi kesalahan");
-    } finally {
-      setIsGenerating(false);
-    }
-  },
-  [input, isGenerating, autoNavigateToSection],
-);
+    },
+    [isGenerating, messages, detectIntent],
+  );
 
-  const highlightKeywords = (text: string) => {
-    let allKeywords = [...PORTFOLIO_KEYS];
-    if (profileContext?.skills) {
-      allKeywords = [...allKeywords, ...profileContext.skills];
-    }
+  const stop = () => abortRef.current?.abort();
 
-    allKeywords = [...new Set(allKeywords)].sort((a, b) => b.length - a.length);
-
-    const regex = new RegExp(
-      `(${allKeywords.map((k) => k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|")})`,
-      "gi",
-    );
-    return text.split(regex).map((part, idx) =>
-      regex.test(part) ? (
-        <code
-          key={idx}
-          className="not-italic font-medium px-1.5 py-0.5 rounded-md"
-          style={{
-            color: "#007AFF",
-            backgroundColor: isLight
-              ? "rgba(0,122,255,0.08)"
-              : "rgba(0,122,255,0.15)",
-            border: `1px solid ${isLight ? "rgba(0,122,255,0.15)" : "rgba(0,122,255,0.25)"}`,
-          }}
-        >
-          {part}
-        </code>
-      ) : (
-        part
-      ),
-    );
+  const reset = () => {
+    abortRef.current?.abort();
+    setMessages([]);
+    setErrorMsg(null);
+    setInput("");
+    inputRef.current?.focus();
   };
 
+  const retry = () => {
+    if (!lastQuery) return;
+    setMessages((prev) => (prev.length && prev[prev.length - 1].role === "user" ? prev.slice(0, -1) : prev));
+    setErrorMsg(null);
+    void send(lastQuery);
+  };
+
+  const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
+      e.preventDefault();
+      void send(input);
+    }
+  };
+
+  // Auto-grow textarea (max ~5 lines).
+  useEffect(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = Math.min(el.scrollHeight, 128) + "px";
+  }, [input]);
+
+  const lastIsStreamingAssistant =
+    isGenerating && messages.length > 0 && messages[messages.length - 1].role === "assistant";
+
   return (
-    // ... (JSX sama seperti sebelumnya)
     <>
-      <style>{`
-        .ai-brain-container, .ai-brain-container * { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
-        @keyframes ai-float {
-          0%, 100% { transform: translateY(0px); }
-          50% { transform: translateY(-10px); }
-        }
-        @keyframes pulse-glow {
-          0%, 100% { box-shadow: 0 0 20px rgba(0, 122, 255, 0.6); }
-          50% { box-shadow: 0 0 30px rgba(0, 122, 255, 0.8); }
-        }
-        .float-button { animation: ai-float 3s ease-in-out infinite; }
-        .pulse-glow { animation: pulse-glow 2s ease-in-out infinite; }
-        .message-fade { animation: fadeInUp 0.3s ease-out; }
-        @keyframes fadeInUp {
-          from { opacity: 0; transform: translateY(10px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        .ai-brain-scrollbar::-webkit-scrollbar { width: 6px; }
-        .ai-brain-scrollbar::-webkit-scrollbar-track {
-          background: ${scrollbarTrack};
-          border-radius: 10px;
-        }
-        .ai-brain-scrollbar::-webkit-scrollbar-thumb {
-          background: rgba(0, 122, 255, 0.4);
-          border-radius: 10px;
-        }
-        .ai-brain-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: rgba(0, 122, 255, 0.6);
-        }
-        .ai-brain-scrollbar {
-          scrollbar-width: thin;
-          scrollbar-color: rgba(0, 122, 255, 0.4) ${scrollbarTrack};
-        }
-        .message-bubble { word-wrap: break-word; overflow-wrap: break-word; line-height: 1.5; }
-        .message-bubble ul, .message-bubble ol { margin: 0.5rem 0 0.5rem 1.5rem; padding: 0; }
-        .message-bubble li { margin: 0.25rem 0; }
-        .message-bubble strong { font-weight: 600; color: #007AFF; }
-        .ai-brain-input::placeholder { color: ${isLight ? "rgba(28,28,30,0.35)" : "rgba(245,245,247,0.35)"}; }
-      `}</style>
-
-      <button
+      {/* Launcher */}
+      <motion.button
+        ref={fabRef}
         type="button"
-        onClick={() => setIsOpen((prev) => !prev)}
-        className="float-button pulse-glow fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-[#007AFF] text-white shadow-2xl transition-transform duration-300 hover:scale-110 focus:outline-none focus:ring-2 focus:ring-cyan-300"
-        aria-label={isOpen ? "Tutup chat AI" : "Buka chat AI"}
+        onClick={() => setIsOpen((v) => !v)}
+        initial={{ scale: 0.8, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ delay: 0.8, type: "spring", stiffness: 260, damping: 20 }}
+        className={`fixed bottom-5 right-5 z-[60] h-14 items-center justify-center gap-2 rounded-full bg-gradient-to-br from-[#39e6b5] to-[#1fb88d] text-[#04120d] shadow-[0_10px_30px_-8px_rgba(57,230,181,0.55)] transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#39e6b5]/70 focus-visible:ring-offset-2 focus-visible:ring-offset-black sm:bottom-6 sm:right-6 ${
+          isOpen ? "hidden w-14 sm:flex" : "flex w-14 sm:w-auto sm:px-5"
+        }`}
+        aria-label={isOpen ? "Tutup asisten AI" : "Buka asisten AI"}
+        aria-expanded={isOpen}
+        aria-controls="ai-assistant-panel"
       >
-        <AnimatePresence initial={false} mode="wait">
-          <motion.div
-            key={isOpen ? "close" : "open"}
-            initial={{ rotate: -90, opacity: 0, scale: 0.5 }}
-            animate={{ rotate: 0, opacity: 1, scale: 1 }}
-            exit={{ rotate: 90, opacity: 0, scale: 0.5 }}
-            transition={{ duration: 0.2, ease: "easeInOut" }}
-            className="w-7 h-7"
-          >
-            {isOpen ? (
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <line x1="18" y1="6" x2="6" y2="18"></line>
-                <line x1="6" y1="6" x2="18" y2="18"></line>
-              </svg>
-            ) : (
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M12 2a10 10 0 0 0-10 10c0 4.42 2.87 8.17 6.84 9.5.6.11.82-.26.82-.57v-2.03c-2.78.6-3.37-1.34-3.37-1.34-.55-1.38-1.33-1.75-1.33-1.75-1.08-.74.08-.72.08-.72 1.2.08 1.83 1.23 1.83 1.23 1.07 1.83 2.8 1.3 3.48 1 .1-.78.42-1.3.76-1.6-2.66-.3-5.46-1.33-5.46-5.93 0-1.31.47-2.38 1.23-3.22-.12-.3-.54-1.52.12-3.18 0 0 1-.32 3.3 1.23a11.5 11.5 0 0 1 6 0c2.3-1.55 3.3-1.23 3.3-1.23.66 1.66.24 2.88.12 3.18.77.84 1.23 1.91 1.23 3.22 0 4.61-2.81 5.63-5.48 5.93.43.37.82 1.1.82 2.22v3.29c0 .31.22.69.82.57A10 10 0 0 0 22 12 10 10 0 0 0 12 2Z" />
-              </svg>
-            )}
-          </motion.div>
-        </AnimatePresence>
-      </button>
+        {isOpen ? (
+          <X className="h-6 w-6" aria-hidden="true" />
+        ) : (
+          <>
+            <Sparkles className="h-5 w-5" aria-hidden="true" />
+            <span className="hidden text-sm font-semibold sm:inline">Ask AI</span>
+          </>
+        )}
+      </motion.button>
 
-      {isOpen && (
-        <div
-          className="ai-brain-container message-fade fixed bottom-24 right-6 sm:bottom-28 sm:right-6 z-40 w-[calc(100vw-2.5rem)] max-w-sm h-[60vh] max-h-[80vh] rounded-2xl shadow-2xl overflow-hidden flex flex-col"
-          style={{
-            backgroundColor: cardBg,
-            backdropFilter: "blur(16px)",
-            WebkitBackdropFilter: "blur(16px)",
-            border: `1px solid ${isLight ? "rgba(0,0,0,0.08)" : "rgba(255,255,255,0.08)"}`,
-          }}
-        >
-          <div className="flex flex-col h-full">
-            <header
-              className={`px-4 py-3 border-b ${headerBorder} flex items-center justify-between flex-shrink-0`}
-            >
-              <div>
-                <h2 className="text-base font-extrabold" style={{ color: textPrimary }}>
-                  AGEN AI
-                </h2>
-                <p className="text-xs" style={{ color: textSecondary }}>
-                  Tanya tentang pemilik
-                </p>
+      <AnimatePresence>
+        {isOpen && (
+          <motion.section
+            id="ai-assistant-panel"
+            role="dialog"
+            aria-modal="false"
+            aria-label="Asisten AI portofolio"
+            initial={{ opacity: 0, y: 24, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 24, scale: 0.98 }}
+            transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+            className="fixed inset-x-0 bottom-0 z-[70] flex h-[88dvh] flex-col overflow-hidden rounded-t-3xl border border-[#1f2c45] bg-[#070c17]/95 shadow-[0_30px_80px_-20px_rgba(0,0,0,0.8)] backdrop-blur-xl sm:inset-x-auto sm:bottom-24 sm:right-6 sm:h-[min(640px,calc(100dvh-8rem))] sm:w-[400px] sm:rounded-3xl"
+          >
+            {/* Header */}
+            <header className="flex items-center gap-3 border-b border-[#1f2c45]/80 px-4 py-3.5">
+              <div className="relative">
+                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-[#39e6b5]/25 to-[#38bdf8]/20 ring-1 ring-[#39e6b5]/30">
+                  <Sparkles className="h-5 w-5 text-[#39e6b5]" aria-hidden="true" />
+                </div>
+                <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-[#070c17] bg-emerald-400" aria-hidden="true" />
               </div>
+              <div className="min-w-0 flex-1">
+                <h2 className="truncate text-[15px] font-semibold text-[#eaf0fb]">Kasyaf&apos;s AI Assistant</h2>
+                <p className="truncate text-xs text-[#7c8aac]">Projects, skills &amp; experience · ID / EN</p>
+              </div>
+              {messages.length > 0 && (
+                <button
+                  type="button"
+                  onClick={reset}
+                  className="rounded-full p-2 text-[#7c8aac] transition-colors hover:bg-white/5 hover:text-[#eaf0fb] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#39e6b5]/60"
+                  aria-label="Mulai percakapan baru"
+                  title="Percakapan baru"
+                >
+                  <RotateCcw className="h-4 w-4" aria-hidden="true" />
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => setIsOpen(false)}
-                className="text-sm font-medium"
-                style={{ color: "#007AFF" }}
+                className="rounded-full p-2 text-[#7c8aac] transition-colors hover:bg-white/5 hover:text-[#eaf0fb] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#39e6b5]/60"
+                aria-label="Tutup asisten AI"
               >
-                Tutup
+                <X className="h-5 w-5" aria-hidden="true" />
               </button>
             </header>
+
+            {/* Messages */}
             <div
-              className="ai-brain-scrollbar flex-1 overflow-y-auto p-4 space-y-3"
-              style={{ minHeight: 0 }}
+              ref={scrollRef}
+              className="flex-1 space-y-4 overflow-y-auto overscroll-contain px-4 py-5 [scrollbar-color:#1f2c45_transparent] [scrollbar-width:thin]"
+              role="log"
+              aria-live="polite"
+              aria-busy={isGenerating}
             >
               {messages.length === 0 && (
-                <div
-                  className={`rounded-xl border border-dashed ${emptyStateBorder} p-4 text-xs sm:text-sm text-center`}
-                  style={{
-                    backgroundColor: emptyStateBg,
-                    color: textSecondary,
-                  }}
-                >
-                  ✨ Tanyakan sesuatu tentang pemilik portofolio
-                </div>
-              )}
-              {messages.map((m, i) => (
-                <div
-                  key={i}
-                  className={`message-fade flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
-                >
-                  <div
-                    className={`message-bubble max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
-                      m.role === "user"
-                        ? "bg-[#007AFF] text-white rounded-br-md"
-                        : "rounded-bl-md"
-                    }`}
-                    style={
-                      m.role === "assistant"
-                        ? {
-                            backgroundColor: assistantBubbleBg,
-                            border: `1px solid ${assistantBubbleBorder}`,
-                            color: textPrimary,
-                          }
-                        : undefined
-                    }
-                  >
-                    {m.role === "assistant" ? highlightKeywords(m.content) : m.content}
+                <div className="flex h-full flex-col justify-end gap-5 pb-1">
+                  <div className="space-y-2">
+                    <p className="text-[22px] font-semibold leading-tight text-[#eaf0fb]">
+                      Halo! <span className="text-[#39e6b5]">Hi there.</span>
+                    </p>
+                    <p className="text-sm leading-relaxed text-[#9aa8c5]">
+                      I can answer questions about Kasyaf&apos;s products, tech stack and experience, in Bahasa
+                      Indonesia or English.
+                    </p>
                   </div>
-                </div>
-              ))}
-              {isGenerating && (
-                <div className="flex justify-start message-fade">
-                  <div
-                    className="rounded-2xl px-4 py-3 rounded-bl-md"
-                    style={{
-                      backgroundColor: assistantBubbleBg,
-                      border: `1px solid ${assistantBubbleBorder}`,
-                    }}
-                  >
-                    <span className="flex gap-1">
-                      <span
-                        className="w-2 h-2 bg-[#007AFF] rounded-full animate-bounce"
-                        style={{ animationDelay: "0ms" }}
-                      ></span>
-                      <span
-                        className="w-2 h-2 bg-[#007AFF] rounded-full animate-bounce"
-                        style={{ animationDelay: "150ms" }}
-                      ></span>
-                      <span
-                        className="w-2 h-2 bg-[#007AFF] rounded-full animate-bounce"
-                        style={{ animationDelay: "300ms" }}
-                      ></span>
-                    </span>
+                  <div className="grid gap-2">
+                    {SUGGESTIONS.map((s) => (
+                      <button
+                        key={s}
+                        type="button"
+                        onClick={() => void send(s)}
+                        className="group flex items-center justify-between rounded-xl border border-[#1f2c45] bg-white/[0.02] px-3.5 py-2.5 text-left text-[13px] text-[#c3cde3] transition-colors hover:border-[#39e6b5]/40 hover:bg-[#39e6b5]/5 hover:text-[#eaf0fb] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#39e6b5]/60"
+                      >
+                        {s}
+                        <ArrowUp className="h-3.5 w-3.5 rotate-45 text-[#7c8aac] transition-colors group-hover:text-[#39e6b5]" aria-hidden="true" />
+                      </button>
+                    ))}
                   </div>
                 </div>
               )}
+
+              {messages.map((m, i) =>
+                m.role === "user" ? (
+                  <div key={i} className="flex justify-end">
+                    <div className="max-w-[85%] whitespace-pre-wrap break-words rounded-2xl rounded-br-md bg-[#39e6b5] px-3.5 py-2.5 text-sm leading-relaxed text-[#04120d]">
+                      {m.content}
+                    </div>
+                  </div>
+                ) : (
+                  <div key={i} className="flex gap-2.5">
+                    <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#39e6b5]/10 ring-1 ring-[#39e6b5]/20">
+                      <Sparkles className="h-3.5 w-3.5 text-[#39e6b5]" aria-hidden="true" />
+                    </div>
+                    <div className="min-w-0 flex-1 break-words text-sm leading-relaxed text-[#c3cde3]">
+                      {m.content ? (
+                        <Markdown text={m.content} />
+                      ) : (
+                        <TypingDots />
+                      )}
+                      {lastIsStreamingAssistant && i === messages.length - 1 && m.content && (
+                        <span className="ml-0.5 inline-block h-4 w-[2px] translate-y-0.5 animate-pulse bg-[#39e6b5]" aria-hidden="true" />
+                      )}
+                    </div>
+                  </div>
+                ),
+              )}
+
+              {isGenerating && !lastIsStreamingAssistant && (
+                <div className="flex gap-2.5">
+                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#39e6b5]/10 ring-1 ring-[#39e6b5]/20">
+                    <Sparkles className="h-3.5 w-3.5 text-[#39e6b5]" aria-hidden="true" />
+                  </div>
+                  <TypingDots />
+                </div>
+              )}
+
               {errorMsg && (
-                <div className="rounded-xl bg-red-500/10 px-4 py-3 text-sm text-red-300 border border-red-500/20">
-                  ⚠️ <span className="font-medium">{errorMsg}</span>
+                <div className="flex items-start justify-between gap-3 rounded-xl border border-red-500/25 bg-red-500/[0.08] px-3.5 py-3 text-[13px] text-red-200" role="alert">
+                  <span>{errorMsg}</span>
+                  {lastQuery && (
+                    <button
+                      type="button"
+                      onClick={retry}
+                      className="shrink-0 rounded-full border border-red-400/30 px-2.5 py-1 text-xs text-red-100 transition-colors hover:bg-red-400/10"
+                    >
+                      Coba lagi
+                    </button>
+                  )}
                 </div>
               )}
-              <div ref={messagesEndRef} />
             </div>
 
+            {/* Composer */}
             <form
-              onSubmit={handleSubmit}
-              className={`border-t ${headerBorder} p-3 flex gap-2 flex-shrink-0`}
+              onSubmit={(e) => {
+                e.preventDefault();
+                void send(input);
+              }}
+              className="border-t border-[#1f2c45]/80 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]"
             >
-              <input
-                value={input}
-                onChange={(e) => {
-                  const sanitized = sanitizeClientInput(e.target.value);
-                  setInput(sanitized);
-                }}
-                onPaste={(e) => {
-                  const pasted = e.clipboardData.getData("text");
-                  const sanitized = sanitizeClientInput(pasted);
-                  if (sanitized !== pasted) {
-                    e.preventDefault();
-                    setInput(sanitized);
-                  }
-                }}
-                disabled={isGenerating}
-                placeholder="Tanya sesuatu..."
-                className="ai-brain-input flex-1 border-0 rounded-full px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-[#007AFF] disabled:opacity-50 transition"
-                style={{ backgroundColor: inputBg, color: textPrimary }}
-                maxLength={2000}
-              />
-              <button
-                type="submit"
-                disabled={
-                  isGenerating || !input.trim() || input === "[Pertanyaan tidak valid]"
-                }
-                className="px-4 py-2 rounded-full bg-[#007AFF] text-white text-sm font-medium disabled:opacity-50 transition"
-              >
-                {isGenerating ? "..." : "Kirim"}
-              </button>
+              <div className="flex items-end gap-2 rounded-2xl border border-[#1f2c45] bg-[#0b1324] p-1.5 pl-3.5 transition-colors focus-within:border-[#39e6b5]/50">
+                <label htmlFor="ai-input" className="sr-only">
+                  Pesan untuk asisten AI
+                </label>
+                <textarea
+                  id="ai-input"
+                  ref={inputRef}
+                  value={input}
+                  onChange={(e) => setInput(e.target.value.slice(0, MAX_INPUT))}
+                  onKeyDown={onKeyDown}
+                  rows={1}
+                  placeholder="Tanya apa saja… / Ask anything…"
+                  className="max-h-32 min-h-[36px] flex-1 resize-none bg-transparent py-2 text-sm text-[#eaf0fb] outline-none placeholder:text-[#5d6b88]"
+                  maxLength={MAX_INPUT}
+                  enterKeyHint="send"
+                />
+                {isGenerating ? (
+                  <button
+                    type="button"
+                    onClick={stop}
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#1f2c45] text-[#eaf0fb] transition-colors hover:bg-[#2b3d5f] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#39e6b5]/60"
+                    aria-label="Hentikan jawaban"
+                  >
+                    <Square className="h-3.5 w-3.5 fill-current" aria-hidden="true" />
+                  </button>
+                ) : (
+                  <button
+                    type="submit"
+                    disabled={!input.trim()}
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#39e6b5] text-[#04120d] transition-colors hover:bg-[#5ff0c6] disabled:cursor-not-allowed disabled:bg-[#1f2c45] disabled:text-[#5d6b88] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#39e6b5]/60"
+                    aria-label="Kirim pesan"
+                  >
+                    <ArrowUp className="h-4 w-4" aria-hidden="true" />
+                  </button>
+                )}
+              </div>
+              <p className="mt-2 px-1 text-center text-[10.5px] text-[#5d6b88]">
+                AI dapat keliru. Untuk hal penting, hubungi Kasyaf langsung.
+              </p>
             </form>
-          </div>
-        </div>
-      )}
+          </motion.section>
+        )}
+      </AnimatePresence>
     </>
+  );
+}
+
+function TypingDots() {
+  return (
+    <span className="inline-flex items-center gap-1 py-2" aria-label="Asisten sedang mengetik">
+      {[0, 150, 300].map((d) => (
+        <span
+          key={d}
+          className="h-1.5 w-1.5 animate-bounce rounded-full bg-[#39e6b5]/80"
+          style={{ animationDelay: `${d}ms` }}
+        />
+      ))}
+    </span>
   );
 }

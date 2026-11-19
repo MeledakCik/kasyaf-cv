@@ -19,6 +19,14 @@ const SKILL_GROUPS = [
     skills: ["Go", "Rust", "Java", "Python", "REST APIs"],
   },
   {
+    label: "Mobile & Desktop",
+    skills: ["Kotlin (Android)", "Swift (iOS)", "C# .NET 8", "WPF / WinForms"],
+  },
+  {
+    label: "Cloud & DevOps",
+    skills: ["Vercel", "Cloudflare Pages", "Railway", "Docker", "Redis", "Supabase"],
+  },
+  {
     label: "Security",
     skills: [
       "Ethical Hacking",
@@ -34,7 +42,7 @@ const SKILL_GROUPS = [
 ];
 
 const MONO = "'JetBrains Mono', 'Fira Code', ui-monospace, monospace";
-const SANS = "'Poppins', sans-serif";
+const SANS = "var(--font-poppins), 'Poppins', sans-serif";
 
 export default function About() {
   return (

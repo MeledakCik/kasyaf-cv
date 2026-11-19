@@ -72,7 +72,7 @@ const SKILL_GROUPS = [
     prompt: 'tools/',
     icon: GitBranch,
     items: [
-      'Crack Injection', 'Reverse Engineering', 'Malware Analysis',
+      'App Hardening (Anti-Tamper)', 'Reverse Engineering', 'Malware Analysis',
       'Security Auditing', 'Risk Assessment', 'Compliance Testing',
       'Agile Methodologies', 'Scrum', 'Team Leadership'
     ],
@@ -85,19 +85,19 @@ export default function Skills() {
       <Reveal>
         <span
           className="text-[#39e6b5] text-xs uppercase tracking-[0.28em]"
-          style={{ fontFamily: "'Poppins', sans-serif" }}
+          style={{ fontFamily: "var(--font-poppins), 'Poppins', sans-serif" }}
         >
           Skills
         </span>
         <h2
           className="mt-4 text-3xl font-semibold text-[#eaf0fb] sm:text-4xl"
-          style={{ fontFamily: "'Poppins', sans-serif" }}
+          style={{ fontFamily: "var(--font-poppins), 'Poppins', sans-serif" }}
         >
           Tools &amp; Technologies I work with
         </h2>
         <p
           className="mt-2 text-sm text-[#7c8aac]/60"
-          style={{ fontFamily: "'Poppins', sans-serif" }}
+          style={{ fontFamily: "var(--font-poppins), 'Poppins', sans-serif" }}
         >
           A comprehensive list of technologies, frameworks, and tools in my arsenal
         </p>
@@ -119,13 +119,13 @@ export default function Skills() {
                   <div>
                     <p
                       className="text-xs text-[#39e6b5]/70 font-mono"
-                      style={{ fontFamily: "'Poppins', sans-serif" }}
+                      style={{ fontFamily: "var(--font-poppins), 'Poppins', sans-serif" }}
                     >
                       {group.prompt}
                     </p>
                     <h3
                       className="text-base font-semibold text-[#eaf0fb]"
-                      style={{ fontFamily: "'Poppins', sans-serif" }}
+                      style={{ fontFamily: "var(--font-poppins), 'Poppins', sans-serif" }}
                     >
                       {group.title}
                     </h3>
@@ -136,7 +136,7 @@ export default function Skills() {
                     <motion.span
                       key={item}
                       className="px-2.5 py-1 text-[10px] rounded-full border border-[#1f2c45]/30 bg-[#05070d]/40 text-[#7c8aac]/80 hover:text-[#eaf0fb] hover:border-[#39e6b5]/20 transition-all"
-                      style={{ fontFamily: "'Poppins', sans-serif" }}
+                      style={{ fontFamily: "var(--font-poppins), 'Poppins', sans-serif" }}
                       whileHover={{ scale: 1.05 }}
                     >
                       {item}
@@ -144,7 +144,7 @@ export default function Skills() {
                   ))}
                 </div>
                 <div className="mt-4 pt-3 border-t border-[#1f2c45]/20 flex justify-between items-center">
-                  <span className="text-[9px] text-[#7c8aac]/40" style={{ fontFamily: "'Poppins', sans-serif" }}>
+                  <span className="text-[9px] text-[#7c8aac]/40" style={{ fontFamily: "var(--font-poppins), 'Poppins', sans-serif" }}>
                     {group.items.length} skills
                   </span>
                   <span className="text-[#39e6b5]/20 group-hover:text-[#39e6b5]/40 transition-all">✦</span>
@@ -162,10 +162,10 @@ export default function Skills() {
         className="mt-16 text-center"
       >
         <div className="inline-flex items-center gap-4 px-6 py-3 rounded-full border border-[#1f2c45]/30 bg-[#101b30]/30 backdrop-blur-sm">
-          <span className="text-2xl font-bold text-[#39e6b5]" style={{ fontFamily: "'Poppins', sans-serif" }}>
+          <span className="text-2xl font-bold text-[#39e6b5]" style={{ fontFamily: "var(--font-poppins), 'Poppins', sans-serif" }}>
             {SKILL_GROUPS.reduce((acc, g) => acc + g.items.length, 0)}
           </span>
-          <span className="text-sm text-[#7c8aac]" style={{ fontFamily: "'Poppins', sans-serif" }}>
+          <span className="text-sm text-[#7c8aac]" style={{ fontFamily: "var(--font-poppins), 'Poppins', sans-serif" }}>
             Total skills &amp; technologies mastered
           </span>
         </div>
