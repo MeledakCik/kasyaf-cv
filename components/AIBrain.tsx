@@ -399,7 +399,15 @@ export default function AIBrain() {
         }
         
         if (response.status === 401) throw new Error("Sesi kadaluarsa / Unauthorized. Silakan refresh halaman.");
-        if (response.status === 403) throw new Error("Akses ditolak oleh Security Shield (Bot Detected).");
+        if (response.status === 403) {
+          throw new Error(
+            /origin/i.test(errorMessage)
+              ? "Akses ditolak: domain ini belum diizinkan (cek pengaturan origin)."
+              : "Akses ditolak oleh Security Shield. Coba refresh halaman.",
+          );
+        }
+        if (response.status === 429) throw new Error("Terlalu banyak pesan. Tunggu sebentar lalu coba lagi.");
+        if (response.status === 502 || response.status === 504) throw new Error("Layanan AI sedang tidak tersedia. Coba lagi nanti.");
         throw new Error(errorMessage || `Error ${response.status}`);
       }
 
