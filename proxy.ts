@@ -59,19 +59,40 @@ function getClientIp(req: NextRequest): string {
   );
 }
 
-function getRateLimitConfigAndCheck(compositeId: string, pathname: string): boolean {
+interface RateResult { ok: boolean; limit: number; remaining: number; resetSec: number; windowSec: number }
+
+function getRateLimitConfigAndCheck(compositeId: string, pathname: string): RateResult {
   const now = Date.now();
   const config = getRateLimitConfig(pathname);
   if (rateLimitMap.size > 10000) rateLimitMap.clear();
-  const entry = rateLimitMap.get(compositeId);
+  let entry = rateLimitMap.get(compositeId);
+  let ok = true;
   if (!entry || now - entry.lastReset > config.window) {
-    rateLimitMap.set(compositeId, { count: 1, lastReset: now, lastSeen: now });
-    return true;
+    entry = { count: 1, lastReset: now, lastSeen: now };
+    rateLimitMap.set(compositeId, entry);
+  } else if (now - entry.lastSeen < 10 && entry.count > 5) {
+    ok = false; // burst: >5 requests within 10 ms
+  } else {
+    entry.count += 1;
+    entry.lastSeen = now;
+    ok = entry.count <= config.max;
   }
-  if (now - entry.lastSeen < 10 && entry.count > 5) return false;
-  entry.count += 1;
-  entry.lastSeen = now;
-  return entry.count <= config.max;
+  return {
+    ok,
+    limit: config.max,
+    remaining: Math.max(0, config.max - entry.count),
+    resetSec: Math.max(1, Math.ceil((entry.lastReset + config.window - now) / 1000)),
+    windowSec: Math.round(config.window / 1000),
+  };
+}
+
+/** IETF RateLimit header fields (draft-ietf-httpapi-ratelimit-headers) + legacy X-RateLimit-*. */
+function setRateLimitHeaders(res: NextResponse, rl: RateResult) {
+  res.headers.set('RateLimit-Policy', `${rl.limit};w=${rl.windowSec}`);
+  res.headers.set('RateLimit', `limit=${rl.limit}, remaining=${rl.remaining}, reset=${rl.resetSec}`);
+  res.headers.set('X-RateLimit-Limit', String(rl.limit));
+  res.headers.set('X-RateLimit-Remaining', String(rl.remaining));
+  res.headers.set('X-RateLimit-Reset', String(rl.resetSec));
 }
 
 function isBot(req: NextRequest): boolean {
@@ -216,10 +237,14 @@ export async function proxy(request: NextRequest) {
   const sessionIdRaw = request.cookies.get('__Host-session_id')?.value || request.cookies.get('session_id')?.value || 'no-session';
   const compositeId = await hmacIdentifier(SECRET_KEY, isPublicChallenge ? `${ip}:${pathname}` : `${ip}:${ua}:${sessionIdRaw}`);
 
-  if (!getRateLimitConfigAndCheck(compositeId, pathname)) {
+  const rl = getRateLimitConfigAndCheck(compositeId, pathname);
+  const isApi = pathname.startsWith('/api/');
+  if (!rl.ok) {
     logSecurityEvent('RATE_LIMIT_EXCEEDED', request, { pathname });
     const res = NextResponse.json({ error: 'Too Many Requests' }, { status: 429 });
     setSecurityHeaders(res, nonce, pathname);
+    setRateLimitHeaders(res, rl);
+    res.headers.set('Retry-After', String(rl.resetSec));
     return res;
   }
 
@@ -228,6 +253,7 @@ export async function proxy(request: NextRequest) {
     const reqHeaders = buildRequestHeaders(request, nonce);
     const res = NextResponse.next({ request: { headers: reqHeaders } });
     setSecurityHeaders(res, nonce, pathname);
+    setRateLimitHeaders(res, rl);
     return res;
   }
 
@@ -249,6 +275,7 @@ export async function proxy(request: NextRequest) {
     if (!verifiedSid) {
       const res = NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
       setSecurityHeaders(res, nonce, pathname);
+      setRateLimitHeaders(res, rl);
       return res;
     }
     const headers = buildRequestHeaders(request, nonce);
@@ -256,6 +283,7 @@ export async function proxy(request: NextRequest) {
     headers.set('x-internal-auth', await signInternalToken(verifiedSid, pathname));
     const res = NextResponse.next({ request: { headers } });
     setSecurityHeaders(res, nonce, pathname);
+    if (isApi) setRateLimitHeaders(res, rl);
     return res;
   }
 

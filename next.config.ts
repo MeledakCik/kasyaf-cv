@@ -66,12 +66,14 @@ const nextConfig: NextConfig = {
         headers: [
           { key: "Content-Type", value: "application/xml" },
           { key: "Cache-Control", value: "public, max-age=0, must-revalidate" },
+          { key: "X-Content-Type-Options", value: "nosniff" },
         ],
       },
       {
         source: "/robots.txt",
         headers: [
           { key: "Content-Type", value: "text/plain" },
+          { key: "X-Content-Type-Options", value: "nosniff" },
         ],
       },
       {
