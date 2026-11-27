@@ -6,7 +6,7 @@ export const SHORT_NAME = "Kasyaf";
 export const JOB_TITLE = "Full Stack Developer & Cyber Security";
 
 export const DEFAULT_DESCRIPTION =
-  "Muhammad Kasyaf Anugrah is a Full Stack Developer and cyber security enthusiast from Bandung, Indonesia, who builds secure web, mobile (Android/iOS) and Windows products such as DepUp Office and depup.cloud. Open to remote work.";
+  "Muhammad Kasyaf Anugrah: Full Stack Developer & cyber security from Bandung, Indonesia. Builds secure web, Android, iOS & Windows apps. Open to remote work.";
 
 export const DESCRIPTION_ID =
   "Portofolio Muhammad Kasyaf Anugrah, Full Stack Developer & Cyber Security dari Bandung, Indonesia. Pembuat DepUp Office, depup.cloud, dan Depup Code.";
@@ -50,7 +50,7 @@ export function personJsonLd() {
     name: NAME,
     alternateName: ["Kasyaf", "Muhammad Kasyaf", "MeledakCik"],
     url: SITE_URL,
-    image: `${SITE_URL}/images/profile.png`,
+    image: `${SITE_URL}/images/logo-mark-512.png`,
     jobTitle: "Full Stack Developer",
     description: DEFAULT_DESCRIPTION,
     email: "mailto:kakangkasyaf@gmail.com",

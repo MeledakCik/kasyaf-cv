@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import { AnimatePresence, motion } from "framer-motion";
 import { Poppins } from "next/font/google";
 import LoadingScreen from "@/components/LoadingScreen";
+import Link from "next/link";
 
 const BackgroundCanvas = dynamic(
   () => import("@/components/BackgroundCanvas"),
@@ -110,9 +111,10 @@ export default function Home() {
               transition={{ duration: 0.7, ease: [0.76, 0, 0.24, 1] }}
               className="relative z-20 flex h-full flex-col items-center justify-center text-white px-4"
             >
-              <h1 className="text-[clamp(3.5rem,12vw,160px)] font-bold tracking-[-0.05em] text-center leading-none select-none">
+              {/* Decorative wordmark; the page's real <h1> is in the footer strip below. */}
+              <p aria-hidden="true" className="text-[clamp(3.5rem,12vw,160px)] font-bold tracking-[-0.05em] text-center leading-none select-none">
                 KASYAF
-              </h1>
+              </p>
               <p className="text-base md:text-lg text-sky-200/70 mt-6 mb-12 tracking-[0.2em] uppercase font-medium text-center">
                 Full Stack Developer • Cyber Security
               </p>
@@ -138,6 +140,30 @@ export default function Home() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Server-rendered, visible intro: without it crawlers only saw "Loading..."
+          on the home page (11 words, no <h1>). */}
+      {!showAbout && (
+        <footer className="pointer-events-none fixed inset-x-0 bottom-0 z-20 px-4 pb-5 sm:pb-6">
+          <div className="pointer-events-auto mx-auto flex max-w-5xl flex-col items-center gap-2 text-center sm:flex-row sm:justify-between sm:text-left">
+            <div>
+              <h1 className="text-xs font-semibold tracking-wide text-sky-100/80 sm:text-sm">
+                Muhammad Kasyaf Anugrah · Full Stack Developer &amp; Cyber Security
+              </h1>
+              <p className="mt-0.5 max-w-xl text-[11px] leading-relaxed text-sky-200/45">
+                Bandung, Indonesia. Builder of DepUp Office, depup.cloud, Depup Code and Sentinel-ID.
+                Open to remote work.
+              </p>
+            </div>
+            <nav aria-label="Main pages" className="flex flex-wrap justify-center gap-x-4 gap-y-1 text-[11px] uppercase tracking-[0.18em] text-sky-200/60">
+              <Link href="/profile" className="hover:text-sky-100">Profile</Link>
+              <Link href="/experience" className="hover:text-sky-100">Experience</Link>
+              <Link href="/template" className="hover:text-sky-100">Templates</Link>
+              <a href="https://github.com/MeledakCik" rel="me noopener" target="_blank" className="hover:text-sky-100">GitHub</a>
+            </nav>
+          </div>
+        </footer>
+      )}
     </main>
   );
 }

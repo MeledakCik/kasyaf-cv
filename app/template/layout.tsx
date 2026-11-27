@@ -33,7 +33,7 @@ export default function DashboardLayout({
     >
       <header className="lg:hidden fixed top-0 left-0 right-0 z-40 flex items-center justify-between px-4 py-3 bg-[#0d1326]/90 backdrop-blur-xl border-b border-white/10">
         <div onClick={() => goTo("/template")} className="cursor-pointer">
-          <h1 className="text-lg font-black text-blue-500">MY PRODUCT</h1>
+          <p className="text-lg font-black text-blue-500">MY PRODUCT</p>
         </div>
 
         <button
@@ -67,12 +67,12 @@ export default function DashboardLayout({
               className="lg:hidden fixed top-0 left-0 z-50 w-72 max-w-[80vw] h-full bg-[#0d1326] border-r border-white/10 p-6 flex flex-col"
             >
               <div className="flex items-center justify-between mb-10">
-                <h1
+                <p
                   onClick={() => goTo("/template")}
                   className="text-2xl font-black text-blue-500 cursor-pointer"
                 >
                   MY PRODUCT
-                </h1>
+                </p>
                 <button
                   onClick={() => setIsMobileMenuOpen(false)}
                   aria-label="Close menu"
@@ -106,7 +106,7 @@ export default function DashboardLayout({
               onClick={() => router.push("/template")}
               className="cursor-pointer mb-10"
             >
-              <h1 className="text-2xl font-black text-blue-500">MY PRODUCT</h1>
+              <p className="text-2xl font-black text-blue-500">MY PRODUCT</p>
             </div>
 
             <SidebarNav

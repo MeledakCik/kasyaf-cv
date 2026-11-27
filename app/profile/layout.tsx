@@ -5,7 +5,7 @@ import { NAME, jsonLdString, profilePageJsonLd } from "@/lib/seo";
 export const metadata: Metadata = {
   title: "Profile: Projects, Skills & Experience",
   description:
-    "Projects, skills and experience of Muhammad Kasyaf Anugrah: DepUp Office (Android, iOS, Windows), depup.cloud one-click deployment, Depup Code IDE, Kasyaf Cloud and Sentinel-ID. Full Stack Developer from Bandung, Indonesia.",
+    "Projects, skills & experience of Muhammad Kasyaf Anugrah, Full Stack Developer from Bandung: DepUp Office, depup.cloud, Depup Code, Sentinel-ID & MotionKu.",
   alternates: { canonical: "/profile" },
   openGraph: {
     title: `${NAME}: Projects, Skills & Experience`,

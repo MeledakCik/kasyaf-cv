@@ -16,6 +16,5 @@ export default function sitemap(): MetadataRoute.Sitemap {
     page("/profile", 0.9, "weekly"),
     page("/experience", 0.8, "monthly"),
     page("/template", 0.6, "monthly"),
-    page("/project", 0.4, "monthly"),
   ];
 }

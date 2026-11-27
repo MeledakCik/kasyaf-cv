@@ -1,0 +1,36 @@
+name: SEO agent
+
+# Audits the live site the way search engines see it, then tells Bing / Yandex /
+# Naver / Seznam (IndexNow) to recrawl. No API keys or secrets needed.
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "0 1 * * 1" # every Monday 08:00 WIB
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: seo-agent
+  cancel-in-progress: true
+
+jobs:
+  seo:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # A push triggers the Vercel deploy too: give it time to go live first.
+      - name: Wait for deployment
+        if: github.event_name == 'push'
+        run: sleep 180
+
+      - name: Audit live site and ping IndexNow
+        run: node scripts/seo-agent.mjs --ping

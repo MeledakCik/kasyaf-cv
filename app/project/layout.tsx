@@ -13,6 +13,8 @@ export const metadata: Metadata = {
   title: "Project Lab",
   description: "Experiments and work-in-progress projects by Muhammad Kasyaf Anugrah.",
   alternates: { canonical: "/project" },
+  // Work-in-progress lab: kept out of search results (only finished work is promoted).
+  robots: { index: false, follow: true },
 };
 
 export default function ProjectLayout({

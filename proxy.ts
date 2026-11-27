@@ -15,6 +15,11 @@ const API_PATH = process.env.API_PATH || '/api/';
 const SESSION_MAX_AGE = parseInt(process.env.SESSION_MAX_AGE || '3600');
 const SESSION_ROTATE_AFTER_MS = 15 * 60 * 1000;
 
+const CANONICAL_ORIGIN = 'https://kasyaf.id';
+const REDIRECT_HOSTS = new Set(['www.kasyaf.id', 'kasyaf-cv.my.id', 'www.kasyaf-cv.my.id']);
+/** Public by design (IndexNow verifies ownership by fetching /<key>.txt). */
+const INDEXNOW_KEY = '75ae779739948d619c3be029cbe1db0a';
+
 const PUBLIC_API_PREFIXES = [
   '/api/health',
   '/api/public',
@@ -192,8 +197,18 @@ function setSecurityHeaders(res: NextResponse, nonce: string, pathname: string =
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // BYPASS SEO
-  if (pathname === '/sitemap.xml' || pathname === '/robots.txt' || pathname === '/favicon.ico') {
+  // SEO: one canonical host. www and the old domain serve the same pages, which
+  // splits ranking signals; a permanent redirect consolidates them on kasyaf.id.
+  const host = (request.headers.get('host') || '').toLowerCase().split(':')[0];
+  if (process.env.NODE_ENV === 'production' && REDIRECT_HOSTS.has(host)) {
+    return NextResponse.redirect(new URL(`${pathname}${request.nextUrl.search}`, CANONICAL_ORIGIN), 308);
+  }
+
+  // BYPASS SEO (crawlers, IndexNow key verification, llms.txt for AI search)
+  if (
+    pathname === '/sitemap.xml' || pathname === '/robots.txt' || pathname === '/favicon.ico' ||
+    pathname === '/llms.txt' || pathname === `/${INDEXNOW_KEY}.txt`
+  ) {
     return NextResponse.next();
   }
 
