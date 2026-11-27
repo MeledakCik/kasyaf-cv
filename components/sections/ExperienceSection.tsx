@@ -28,6 +28,7 @@ import Image from "next/image";
 import {
   mainExpertise,
   certificates,
+  certificateYear,
   tools,
   experiences,
   type CertificateItem,
@@ -185,6 +186,9 @@ function TechIcon3D({
 export default function ExperienceSection() {
   const [activeTab, setActiveTab] = useState<"tools" | "experience">("tools");
   const [activeCert, setActiveCert] = useState<CertificateItem | null>(null);
+  const [showAllCerts, setShowAllCerts] = useState(false);
+  const CERT_PREVIEW = 5;
+  const visibleCerts = showAllCerts ? certificates : certificates.slice(0, CERT_PREVIEW);
 
   // Curated list of live / released products (data/projects.ts) instead of a
   // random sample of every GitHub repo, which could surface unfinished work.
@@ -391,26 +395,58 @@ export default function ExperienceSection() {
           <h3 className="text-white font-semibold text-sm flex items-center gap-2 mb-6">
             <Award size={14} className="text-violet-400" /> Sertifikat & Lisensi
           </h3>
-          <div className="border-l border-white/10 pl-6 space-y-6">
-            {certificates.map((c) => (
-              <div key={c.title} className="relative">
+          <ol className="border-l border-white/10 pl-6 space-y-6">
+            {visibleCerts.map((c) => (
+              <li key={c.image} className="relative">
                 <span className="absolute -left-[31px] top-1.5 w-2.5 h-2.5 bg-violet-500 rounded-full ring-4 ring-violet-500/20" />
-                <span className="text-xs font-mono px-2 py-0.5 rounded-full bg-white/[0.05] border border-white/10 text-emerald-400">
-                  {c.year}
-                </span>
+                <div className="flex items-center gap-2">
+                  <time
+                    dateTime={c.date}
+                    className="text-xs font-mono px-2 py-0.5 rounded-full bg-white/[0.05] border border-white/10 text-emerald-400"
+                  >
+                    {certificateYear(c)}
+                  </time>
+                  <span className="text-[10px] uppercase tracking-wider text-white/30">
+                    {c.kind === "course" ? "Kelulusan kelas" : "Peserta"}
+                  </span>
+                </div>
                 <h4 className="mt-2 text-sm font-semibold text-white leading-tight">
                   {c.title}
                 </h4>
                 <p className="text-xs text-white/40 mt-0.5">{c.issuer}</p>
-                <button
-                  onClick={() => setActiveCert(c)}
-                  className="mt-2 text-xs font-medium text-violet-400 hover:underline inline-block cursor-pointer"
-                >
-                  Lihat Sertifikat →
-                </button>
-              </div>
+                <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1">
+                  <button
+                    type="button"
+                    onClick={() => setActiveCert(c)}
+                    className="text-xs font-medium text-violet-400 hover:underline cursor-pointer"
+                  >
+                    Lihat Sertifikat →
+                  </button>
+                  {c.verifyUrl && (
+                    <a
+                      href={c.verifyUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs font-medium text-emerald-400 hover:underline inline-flex items-center gap-1"
+                    >
+                      Verifikasi <ExternalLink size={10} />
+                    </a>
+                  )}
+                </div>
+              </li>
             ))}
-          </div>
+          </ol>
+          {certificates.length > CERT_PREVIEW && (
+            <button
+              type="button"
+              onClick={() => setShowAllCerts((v) => !v)}
+              className="mt-6 w-full rounded-full border border-white/10 bg-white/[0.04] py-2 text-xs font-medium text-white/60 hover:text-white hover:bg-white/[0.08] transition-colors cursor-pointer"
+            >
+              {showAllCerts
+                ? "Tampilkan lebih sedikit"
+                : `Lihat semua sertifikat (${certificates.length})`}
+            </button>
+          )}
         </div>
 
         {/* Tools & Experience Tabs */}
@@ -512,7 +548,10 @@ export default function ExperienceSection() {
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-[#15151f] border border-white/10 rounded-2xl p-5 max-w-lg w-full shadow-2xl"
+              className="bg-[#15151f] border border-white/10 rounded-2xl p-5 max-w-3xl w-full shadow-2xl"
+              role="dialog"
+              aria-modal="true"
+              aria-label={activeCert.title}
             >
               <div className="flex justify-between items-center mb-4">
                 <h4 className="text-white font-semibold text-sm truncate pr-2">
@@ -525,24 +564,37 @@ export default function ExperienceSection() {
                   <X size={14} />
                 </button>
               </div>
-              <div className="bg-black rounded-xl min-h-[220px] flex items-center justify-center overflow-hidden border border-white/5 p-2 relative">
-                {activeCert.image ? (
-                  // ✅ Gambar sertifikat - gunakan unoptimized jika domain tidak dikenal
-                  <Image
-                    src={activeCert.image}
-                    alt={activeCert.title}
-                    width={500}
-                    height={300}
-                    className="max-h-[300px] w-full object-contain rounded"
-                    unoptimized={
-                      !activeCert.image.includes("linkedin") &&
-                      !activeCert.image.includes("unsplash")
-                    }
-                  />
-                ) : (
-                  <span className="text-white/20 text-xs">
-                    Gambar sertifikat belum tersedia
-                  </span>
+              <div className="bg-black rounded-xl overflow-hidden border border-white/5 p-2">
+                <Image
+                  src={activeCert.image}
+                  alt={`Sertifikat ${activeCert.title} — ${activeCert.issuer}, Muhammad Kasyaf Anugrah`}
+                  width={activeCert.imageWidth}
+                  height={activeCert.imageHeight}
+                  sizes="(max-width: 768px) 100vw, 768px"
+                  className="max-h-[70vh] w-full h-auto object-contain rounded"
+                />
+              </div>
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs">
+                <p className="text-white/50">
+                  {activeCert.issuer} ·{" "}
+                  <time dateTime={activeCert.date}>
+                    {new Date(activeCert.date).toLocaleDateString("id-ID", {
+                      day: "numeric",
+                      month: "long",
+                      year: "numeric",
+                    })}
+                  </time>
+                </p>
+                {activeCert.verifyUrl && (
+                  <a
+                    href={activeCert.verifyUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 font-medium text-emerald-400 hover:underline"
+                  >
+                    Verifikasi di {new URL(activeCert.verifyUrl).hostname.replace("www.", "")}{" "}
+                    <ExternalLink size={10} />
+                  </a>
                 )}
               </div>
             </motion.div>

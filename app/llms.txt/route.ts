@@ -2,6 +2,7 @@
 // Perplexity, Claude...). Generated from the same data as the site, so it
 // never drifts. Format: https://llmstxt.org
 import { PROJECTS, GITHUB_PROFILE } from "@/data/projects";
+import { certificates } from "@/data/certificates";
 import { NAME, SITE_URL, DEFAULT_DESCRIPTION, DESCRIPTION_ID, SAME_AS } from "@/lib/seo";
 
 export const dynamic = "force-static";
@@ -11,6 +12,10 @@ export function GET() {
     const links = [p.liveUrl, p.downloadUrl, p.repoUrl].filter(Boolean).join(" · ");
     return `- [${p.name}](${p.liveUrl || p.downloadUrl || p.repoUrl}): ${p.tagline}. ${p.description} (${p.platforms.join(", ")}; ${p.status}) ${links}`;
   }).join("\n");
+
+  const certs = certificates
+    .map((c) => `- ${c.title}, ${c.issuer} (${c.date})${c.verifyUrl ? ` verify: ${c.verifyUrl}` : ""}`)
+    .join("\n");
 
   const body = `# ${NAME}
 
@@ -26,6 +31,9 @@ ${DESCRIPTION_ID}
 
 ## Products (live or released)
 ${projects}
+
+## Certificates
+${certs}
 
 ## Contact & profiles
 - Email: kakangkasyaf@gmail.com

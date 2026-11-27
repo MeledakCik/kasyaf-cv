@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
 import { SITE_URL } from "@/lib/seo";
+import { certificates } from "@/data/certificates";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const lastModified = new Date();
@@ -14,7 +15,11 @@ export default function sitemap(): MetadataRoute.Sitemap {
   return [
     page("", 1, "monthly"),
     page("/profile", 0.9, "weekly"),
-    page("/experience", 0.8, "monthly"),
+    {
+      ...page("/experience", 0.8, "monthly"),
+      // Image sitemap: lets the certificate scans show up in Google Images.
+      images: certificates.map((c) => `${SITE_URL}${c.image}`),
+    },
     page("/template", 0.6, "monthly"),
   ];
 }

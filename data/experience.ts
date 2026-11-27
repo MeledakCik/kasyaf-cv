@@ -12,6 +12,9 @@ import {
   SiReact,
 } from "react-icons/si";
 
+export { certificates, certificateYear } from "./certificates";
+export type { CertificateItem } from "./certificates";
+
 /* -------------------------------------------------------------------------- */
 /*  TYPES                                                                     */
 /* -------------------------------------------------------------------------- */
@@ -32,13 +35,6 @@ export interface FeaturedProjectItem {
   gradient: string; // tailwind gradient classes used as thumbnail placeholder
   liveUrl?: string;
   githubUrl?: string;
-}
-
-export interface CertificateItem {
-  year: string;
-  title: string;
-  issuer: string;
-  image?: string; // path in /public, shown in modal when clicked
 }
 
 export interface ToolItem {
@@ -75,27 +71,6 @@ export const mainExpertise: MainExpertiseItem[] = [
     title: "Automation & Scraping",
     description: "Cheerio, Puppeteer, Upstash Redis",
     percent: 85,
-  },
-];
-
-export const certificates: CertificateItem[] = [
-  {
-    year: "2024",
-    title: "Juara Umum IYRC China",
-    issuer: "Robotik — International Youth Robot Competition",
-    image: "/images/certificates/iyrc-china.jpg",
-  },
-  {
-    year: "2024",
-    title: "Champion Creative Design",
-    issuer: "MSU-BIT University Shenzhen",
-    image: "/images/certificates/msu-bit-design.jpg",
-  },
-  {
-    year: "2023",
-    title: "Next.js & Web Security Certification",
-    issuer: "Dicoding / BNSP",
-    image: "/images/certificates/nextjs-security.jpg",
   },
 ];
 

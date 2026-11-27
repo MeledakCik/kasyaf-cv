@@ -1,4 +1,5 @@
 import { PROJECTS } from "@/data/projects";
+import { certificates } from "@/data/certificates";
 
 export const SITE_URL = "https://kasyaf.id";
 export const NAME = "Muhammad Kasyaf Anugrah";
@@ -80,9 +81,33 @@ export function personJsonLd() {
       "DevOps",
       "Cyber Security",
       "Application Security",
+      "Java",
+      "Python",
+      "HTML & CSS",
+      "UI/UX Design",
+      "Computer Networking",
     ],
     sameAs: SAME_AS,
+    hasCredential: credentialsJsonLd(),
   };
+}
+
+/** Certificates as schema.org credentials (data/certificates.ts). */
+export function credentialsJsonLd() {
+  return certificates.map((c) => ({
+    "@type": "EducationalOccupationalCredential",
+    name: c.title,
+    credentialCategory: c.kind === "course" ? "certificate" : "certificate of attendance",
+    dateCreated: c.date,
+    image: `${SITE_URL}${c.image}`,
+    ...(c.note ? { description: c.note } : {}),
+    ...(c.verifyUrl ? { url: c.verifyUrl } : {}),
+    recognizedBy: {
+      "@type": "Organization",
+      name: c.issuer,
+      ...(c.issuerUrl ? { url: c.issuerUrl } : {}),
+    },
+  }));
 }
 
 export function siteJsonLd() {
