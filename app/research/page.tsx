@@ -4,7 +4,7 @@ import ResearchClient from "./ResearchClient";
 export const metadata: Metadata = {
   title: "Security Research",
   description:
-    "Independent security research by Muhammad Kasyaf Anugrah: RECES (server-side command execution) and Indexing Route Injection, with audits and remediation for Next.js and Laravel.",
+    "Security research by Muhammad Kasyaf Anugrah: command execution (RECES), Indexing Route Injection and JWT signature bypass via encryption & CDN cache.",
   alternates: { canonical: "/research" },
 };
 

@@ -215,4 +215,99 @@ export const securityResearch: SecurityResearchItem[] = [
       ],
     },
   },
+  {
+    acronym: "JSB",
+    name: "JWT Signature Bypass via Encryption & CDN Cache Layers",
+    type: {
+      en: "Independent research · Approved testing · Isolated lab",
+      id: "Riset mandiri · Pengujian disetujui · Lab terisolasi",
+    },
+    stack: ["JWT / JWE", "Encryption", "CDN / Reverse Proxy Cache", "Next.js", "Node.js", "Laravel"],
+    summary: {
+      en: "How a system protected by two layers, encryption and a reverse proxy or CDN cache, can serve data sessions to requests whose JWT signature was never verified, and how to make the signature check unavoidable.",
+      id: "Bagaimana sistem yang dilindungi dua lapis, yaitu enkripsi dan reverse proxy atau cache CDN, bisa menyajikan sesi data ke request yang signature JWT-nya tidak pernah diverifikasi, dan bagaimana membuat pemeriksaan signature tidak bisa dilewati.",
+    },
+    cv: {
+      en: [
+        "Conducted independent research into systems that protect data with two layers, encryption and a reverse proxy or CDN cache, and how authenticated data can be served without the JWT signature ever being checked.",
+        "Audited Next.js, Node.js and Laravel applications in an isolated lab: encryption used in place of a signature (decrypt-then-trust), JWE tokens without a verified inner signature, and CDN cache keys and headers for authenticated API responses.",
+        "Focused on data sessions (API responses carrying user or business data) rather than login sessions, and explained the impact to stakeholders: data exposure to requests that never proved their identity.",
+        "Delivered remediation guidance (authenticated encryption or sign-then-encrypt with the signature verified after decryption, pinned algorithms and keys, no shared caching of authenticated data, edge verification with identity in the cache key where caching is required) through responsible disclosure.",
+      ],
+      id: [
+        "Melakukan riset mandiri tentang sistem yang melindungi data dengan dua lapis, yaitu enkripsi dan reverse proxy atau cache CDN, serta bagaimana data yang seharusnya terautentikasi bisa tersaji tanpa signature JWT pernah diperiksa.",
+        "Mengaudit aplikasi Next.js, Node.js, dan Laravel di lab terisolasi: enkripsi yang dipakai sebagai pengganti signature (decrypt lalu langsung dipercaya), token JWE tanpa signature di dalamnya yang diverifikasi, serta kunci cache dan header CDN untuk respons API yang terautentikasi.",
+        "Berfokus pada sesi data (respons API yang membawa data pengguna atau data bisnis), bukan sesi login, dan menjelaskan dampaknya ke stakeholder: data terbuka untuk request yang tidak pernah membuktikan identitasnya.",
+        "Menyerahkan rekomendasi perbaikan (enkripsi terautentikasi atau sign-then-encrypt dengan signature diverifikasi setelah dekripsi, algoritma dan key yang dikunci, tidak menyimpan data terautentikasi di shared cache, verifikasi di edge dengan identitas masuk ke kunci cache bila cache memang dibutuhkan) melalui responsible disclosure.",
+      ],
+    },
+    detail: {
+      en: [
+        {
+          heading: "Background",
+          body: "Some systems feel well protected because data passes through two layers: it is encrypted, and it sits behind a reverse proxy or CDN cache. Neither layer proves who sent a request. Encryption hides content but, without authentication, does not show that a token was issued by the server, so decrypting a token and then trusting it is not the same as verifying its signature. A CDN cache answers from what it stored earlier, so if authenticated data is cached under a key that ignores the token, the origin, the only place the signature is checked, never sees the request. This research looks at how these two layers together let data sessions through without a valid signature, and how to design that out.",
+        },
+        {
+          heading: "Scope",
+          body: "The research focuses on data sessions, meaning API responses that carry user or business data, not login sessions. It covers Next.js, Node.js and Laravel applications behind a reverse proxy or CDN. All testing was approved in advance and ran inside an isolated lab.",
+          points: [
+            "Encryption used as if it were integrity: encryption without a MAC, decrypt-then-trust logic, and JWE tokens whose inner signature is not verified",
+            "Algorithm and key configuration for signing and encryption that is not pinned",
+            "Reverse proxy and CDN cache rules for authenticated API responses: cache key, Vary, Cache-Control and which headers are ignored",
+            "Edge checks that only look at whether a token is present or well formed, while the signature is verified only at the origin",
+          ],
+        },
+        {
+          heading: "Approach",
+          body: "I trace a data request from the CDN edge to the origin handler and record which layer actually makes the trust decision on a cache miss and on a cache hit. For the encryption layer I check whether integrity is verified after decryption or only assumed. For the cache layer I check what the cache key is built from and whether responses that depend on identity can be stored and replayed to another request. Every pattern is validated in the lab with tokens and data I created myself, and documented together with its fix.",
+        },
+        {
+          heading: "What I delivered",
+          body: "",
+          points: [
+            "Controlled demonstrations for stakeholders showing the difference between a request that reaches the origin and one answered by the cache, explained in terms of data exposure and business impact",
+            "A remediation plan: authenticated encryption (AEAD) or sign-then-encrypt with the signature verified after decryption, pinned algorithms and keys, Cache-Control private or no-store for authenticated data, and where edge caching is required, JWT verification at the edge with the verified identity in the cache key",
+            "Regression tests that send tampered and unsigned tokens against both cold and warm cache paths, applied to my own projects",
+          ],
+        },
+        {
+          heading: "Ethics & responsible disclosure",
+          body: "I carried out this research on my own, in my own lab, and only with approved testing, using tokens, accounts and data I created. I do not access, store or distribute anyone else's data. Findings are shared directly with the relevant stakeholders with a focus on fixes, and I do not publish payloads, forged tokens or exploit steps.",
+        },
+      ],
+      id: [
+        {
+          heading: "Latar belakang",
+          body: "Sebagian sistem terasa aman karena data melewati dua lapis: data dienkripsi, dan berada di belakang reverse proxy atau cache CDN. Tidak satu pun dari lapisan itu membuktikan siapa pengirim request. Enkripsi menyembunyikan isi, tetapi tanpa autentikasi tidak menunjukkan bahwa token memang diterbitkan server, sehingga men-decrypt token lalu langsung memercayainya tidak sama dengan memverifikasi signature. Cache CDN menjawab dari apa yang sudah disimpan sebelumnya, jadi jika data terautentikasi disimpan di cache dengan kunci yang mengabaikan token, origin, satu-satunya tempat signature diperiksa, tidak pernah melihat request itu. Riset ini membahas bagaimana dua lapisan ini bersama-sama meloloskan sesi data tanpa signature yang valid, dan bagaimana mendesain sistem agar tidak terjadi.",
+        },
+        {
+          heading: "Ruang lingkup",
+          body: "Riset ini berfokus pada sesi data, yaitu respons API yang membawa data pengguna atau data bisnis, bukan sesi login. Cakupannya aplikasi Next.js, Node.js, dan Laravel di belakang reverse proxy atau CDN. Seluruh pengujian sudah mendapat persetujuan sebelumnya dan dijalankan di dalam lab terisolasi.",
+          points: [
+            "Enkripsi yang diperlakukan seolah menjamin integritas: enkripsi tanpa MAC, logika decrypt lalu percaya, dan token JWE yang signature di dalamnya tidak diverifikasi",
+            "Konfigurasi algoritma dan key untuk signing maupun enkripsi yang tidak dikunci",
+            "Aturan cache reverse proxy dan CDN untuk respons API terautentikasi: kunci cache, Vary, Cache-Control, dan header apa saja yang diabaikan",
+            "Pemeriksaan di edge yang hanya melihat ada tidaknya token atau formatnya, sementara signature hanya diverifikasi di origin",
+          ],
+        },
+        {
+          heading: "Pendekatan",
+          body: "Saya menelusuri request data dari edge CDN sampai handler di origin dan mencatat lapisan mana yang sebenarnya mengambil keputusan percaya saat cache miss dan saat cache hit. Untuk lapisan enkripsi saya memeriksa apakah integritas diverifikasi setelah dekripsi atau hanya diasumsikan. Untuk lapisan cache saya memeriksa dari apa kunci cache dibentuk dan apakah respons yang bergantung pada identitas bisa tersimpan lalu disajikan ke request lain. Setiap pola divalidasi di lab dengan token dan data yang saya buat sendiri, lalu didokumentasikan bersama perbaikannya.",
+        },
+        {
+          heading: "Yang saya hasilkan",
+          body: "",
+          points: [
+            "Demo terkontrol untuk stakeholder yang menunjukkan perbedaan request yang sampai ke origin dan yang dijawab cache, dijelaskan dari sisi keterbukaan data dan dampak bisnis",
+            "Rencana perbaikan: enkripsi terautentikasi (AEAD) atau sign-then-encrypt dengan signature diverifikasi setelah dekripsi, algoritma dan key yang dikunci, Cache-Control private atau no-store untuk data terautentikasi, dan bila cache di edge memang dibutuhkan, verifikasi JWT di edge dengan identitas terverifikasi masuk ke kunci cache",
+            "Regression test yang mengirim token yang diubah dan token tanpa signature di jalur cache dingin maupun hangat, diterapkan di proyek saya sendiri",
+          ],
+        },
+        {
+          heading: "Etika & responsible disclosure",
+          body: "Riset ini saya kerjakan sendiri, di lab sendiri, dan hanya dengan pengujian yang sudah disetujui, memakai token, akun, dan data yang saya buat sendiri. Saya tidak mengakses, menyimpan, atau menyebarkan data milik orang lain. Temuan disampaikan langsung ke stakeholder terkait dengan fokus pada perbaikan, dan saya tidak mempublikasikan payload, token palsu, maupun langkah exploit.",
+        },
+      ],
+    },
+  },
 ];

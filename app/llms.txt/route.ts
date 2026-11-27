@@ -32,7 +32,7 @@ ${DESCRIPTION_ID}
 - [Home](${SITE_URL}/): introduction
 - [Profile](${SITE_URL}/profile): projects, skills, experience and contact
 - [Experience](${SITE_URL}/experience): work history, expertise and certificates
-- [Research](${SITE_URL}/research): security research (RECES, Indexing Route Injection)
+- [Research](${SITE_URL}/research): security research (RECES, Indexing Route Injection, JWT signature bypass via encryption & CDN cache)
 
 ## Products (live or released)
 ${projects}
