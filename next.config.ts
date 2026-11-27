@@ -58,6 +58,11 @@ const nextConfig: NextConfig = {
     return config;
   },
 
+  async redirects() {
+    // /template ("My Product") was replaced by /research ("My Research").
+    return [{ source: "/template", destination: "/research", permanent: true }];
+  },
+
     async headers() {
     return [
       // 1. BYPASS KHUSUS SEO - HARUS PALING ATAS!

@@ -158,7 +158,7 @@ export default function Home() {
             <nav aria-label="Main pages" className="flex flex-wrap justify-center gap-x-4 gap-y-1 text-[11px] uppercase tracking-[0.18em] text-sky-200/60">
               <Link href="/profile" className="hover:text-sky-100">Profile</Link>
               <Link href="/experience" className="hover:text-sky-100">Experience</Link>
-              <Link href="/template" className="hover:text-sky-100">Templates</Link>
+              <Link href="/research" className="hover:text-sky-100">Research</Link>
               <a href="https://github.com/MeledakCik" rel="me noopener" target="_blank" className="hover:text-sky-100">GitHub</a>
             </nav>
           </div>

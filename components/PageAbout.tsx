@@ -55,13 +55,13 @@ const ExperienceIcon = () => (
 
 const CARDS = [
   { id: "aboutme", title: "About Me", icon: <AboutIcon /> },
-  { id: "templates", title: "My Product", icon: <TemplatesIcon /> },
+  { id: "templates", title: "My Research", icon: <TemplatesIcon /> },
   { id: "experience", title: "Experience", icon: <ExperienceIcon /> },
 ];
 
 const NAVIGATE_ROUTES: Record<string, string> = {
   aboutme: "/profile",
-  templates: "/template",
+  templates: "/research",
   experience: "/experience",
 };
 

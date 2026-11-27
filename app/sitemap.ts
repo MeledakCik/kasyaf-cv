@@ -20,6 +20,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
       // Image sitemap: lets the certificate scans show up in Google Images.
       images: certificates.map((c) => `${SITE_URL}${c.image}`),
     },
-    page("/template", 0.6, "monthly"),
+    page("/research", 0.7, "monthly"),
   ];
 }

@@ -10,7 +10,7 @@ const LABELS: Record<Lang, { more: string; less: string }> = {
   id: { more: "Baca selengkapnya", less: "Sembunyikan detail" },
 };
 
-export default function SecurityResearch() {
+export default function SecurityResearch({ title = "Security Research" }: { title?: string }) {
   const [lang, setLang] = useState<Lang>("id");
   const [open, setOpen] = useState<string | null>(null);
 
@@ -21,7 +21,7 @@ export default function SecurityResearch() {
           id="security-research-heading"
           className="text-white font-semibold text-base flex items-center gap-2"
         >
-          <ShieldCheck size={16} className="text-emerald-400" /> Security Research
+          <ShieldCheck size={16} className="text-emerald-400" /> {title}
         </h3>
         <div className="flex gap-1 rounded-full border border-white/10 bg-white/[0.04] p-1" role="group" aria-label="Language">
           {(["id", "en"] as const).map((l) => (
@@ -40,13 +40,15 @@ export default function SecurityResearch() {
         </div>
       </div>
 
+      <div className="space-y-4">
       {securityResearch.map((r) => {
         const isOpen = open === r.acronym;
         return (
           <article
             key={r.acronym}
+            id={r.acronym.toLowerCase()}
             lang={lang}
-            className="rounded-2xl bg-[#10101b] border border-white/[0.06] p-6 hover:border-emerald-500/20 transition-colors"
+            className="scroll-mt-20 rounded-2xl bg-[#10101b] border border-white/[0.06] p-6 hover:border-emerald-500/20 transition-colors"
           >
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
@@ -123,6 +125,7 @@ export default function SecurityResearch() {
           </article>
         );
       })}
+      </div>
     </section>
   );
 }

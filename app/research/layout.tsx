@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { Poppins } from "next/font/google";
 import { AnimatePresence, motion } from "framer-motion";
-import { PRODUCT_CATEGORIES } from "@/lib/products-data";
+import { securityResearch } from "@/data/security-research";
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -32,8 +32,8 @@ export default function DashboardLayout({
       className={`${poppins.className} bg-[#0a0e1a] text-[#e2e8f0] h-screen overflow-hidden select-none`}
     >
       <header className="lg:hidden fixed top-0 left-0 right-0 z-40 flex items-center justify-between px-4 py-3 bg-[#0d1326]/90 backdrop-blur-xl border-b border-white/10">
-        <div onClick={() => goTo("/template")} className="cursor-pointer">
-          <p className="text-lg font-black text-blue-500">MY PRODUCT</p>
+        <div onClick={() => goTo("/research")} className="cursor-pointer">
+          <p className="text-lg font-black text-blue-500">MY RESEARCH</p>
         </div>
 
         <button
@@ -68,10 +68,10 @@ export default function DashboardLayout({
             >
               <div className="flex items-center justify-between mb-10">
                 <p
-                  onClick={() => goTo("/template")}
+                  onClick={() => goTo("/research")}
                   className="text-2xl font-black text-blue-500 cursor-pointer"
                 >
-                  MY PRODUCT
+                  MY RESEARCH
                 </p>
                 <button
                   onClick={() => setIsMobileMenuOpen(false)}
@@ -103,10 +103,10 @@ export default function DashboardLayout({
         >
           <aside className="hidden lg:flex w-72 bg-[#0d1326]/80 backdrop-blur-2xl border-r border-white/10 p-6 flex-col fixed h-full">
             <div
-              onClick={() => router.push("/template")}
+              onClick={() => router.push("/research")}
               className="cursor-pointer mb-10"
             >
-              <p className="text-2xl font-black text-blue-500">MY PRODUCT</p>
+              <p className="text-2xl font-black text-blue-500">MY RESEARCH</p>
             </div>
 
             <SidebarNav
@@ -141,8 +141,8 @@ function SidebarNav({
     <nav className="space-y-2 overflow-y-auto">
       <NavItem
         label="Dashboard"
-        path="/template"
-        active={pathname === "/template"}
+        path="/research"
+        active={pathname === "/research"}
         onNavigate={onNavigate}
       />
 
@@ -151,7 +151,7 @@ function SidebarNav({
           onClick={() => setIsTemplatesOpen(!isTemplatesOpen)}
           className="px-5 py-3 rounded-lg cursor-pointer flex justify-between text-white/70 hover:bg-white/5"
         >
-          Products
+          Research
           <span className={`transition ${isTemplatesOpen ? "rotate-180" : ""}`}>
             ▼
           </span>
@@ -160,19 +160,20 @@ function SidebarNav({
         {isTemplatesOpen && (
           <div className="pl-5 mt-2 space-y-1">
             <div
-              onClick={() => onNavigate("/template")}
+              onClick={() => onNavigate("/research")}
               className="px-4 py-2 cursor-pointer hover:bg-white/5 rounded-lg"
             >
               All
             </div>
 
-            {PRODUCT_CATEGORIES.map((cat) => (
+            {securityResearch.map((r) => (
               <div
-                key={cat}
-                onClick={() => onNavigate(`/template?category=${cat}`)}
+                key={r.acronym}
+                onClick={() => onNavigate(`/research#${r.acronym.toLowerCase()}`)}
                 className="px-4 py-2 cursor-pointer hover:bg-white/5 rounded-lg"
               >
-                {cat}
+                <span className="font-semibold">{r.acronym}</span>
+                <span className="block text-xs text-white/40">{r.name}</span>
               </div>
             ))}
           </div>

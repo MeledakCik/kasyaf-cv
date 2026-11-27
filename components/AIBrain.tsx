@@ -33,9 +33,10 @@ const HISTORY_TURNS = 6;
 /* ----------------------------- navigation intents ----------------------------- */
 
 const ROUTES: Record<string, string> = {
-  template: "/template",
-  koleksi: "/template",
-  produk: "/template",
+  riset: "/research",
+  research: "/research",
+  penelitian: "/research",
+  template: "/research",
 };
 const NAV_WORDS = ["buka", "lihat", "tunjukkan", "arahkan", "pergi ke", "open", "show me", "go to"];
 const SECTIONS: [string, string][] = [
