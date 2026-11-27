@@ -1,6 +1,7 @@
 // lib/pow-challenge.ts - FINAL SECURED + IP/UA BINDING
 import { createHmac, createHash, randomBytes, timingSafeEqual } from 'crypto';
 import { NextRequest } from 'next/server';
+import { capMap } from './client-ip';
 
 const CHALLENGE_SECRET = process.env.CHALLENGE_SECRET || process.env.COOKIE_SECRET;
 const CHALLENGE_TTL_MS = 60_000; // 60 detik
@@ -65,7 +66,7 @@ function cleanupUsed(now: number) {
     if (now - usedAt > USED_TTL_MS) usedChallenges.delete(key);
   }
   // Hard limit safety valve jika diserang jutaan request
-  if (usedChallenges.size > 10_000) usedChallenges.clear();
+  capMap(usedChallenges, 10_000);
 }
 
 export function verifyChallengeSolution(challenge: string, nonce: string | number, req?: Request | NextRequest): boolean {

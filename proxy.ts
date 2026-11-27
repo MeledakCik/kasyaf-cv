@@ -8,6 +8,7 @@ import {
   hmacIdentifier
 } from '@/lib/auth';
 import { validateOrigin } from '@/lib/origin-guard';
+import { getClientIp, capMap } from '@/lib/client-ip';
 
 const VERIFY_PATH = process.env.VERIFY_PATH || '/v2/shield-verify';
 const API_PATH = process.env.API_PATH || '/api/';
@@ -34,7 +35,8 @@ function getRateLimitConfig(pathname: string) {
   for (const [prefix, config] of Object.entries(RATE_LIMIT_CONFIG)) {
     if (pathname.startsWith(prefix)) return config;
   }
-  return { window: 60_000, max: 100 };
+  // Pages are keyed per IP (see compositeId): leave room for shared NAT/campus IPs.
+  return { window: 60_000, max: 300 };
 }
 
 interface RateEntry { count: number; lastReset: number; lastSeen: number; }
@@ -55,25 +57,13 @@ function logSecurityEvent(type: string, req: NextRequest, extra: { pathname?: st
   console.warn(`[SECURITY] ${type} | ip=${ip} | path=${extra.pathname || req.nextUrl.pathname}`);
 }
 
-// Order matters: headers set by the hosting edge first; cf-connecting-ip last
-// because any client can send it when the site is not behind Cloudflare.
-function getClientIp(req: NextRequest): string {
-  return (
-    req.headers.get('x-vercel-forwarded-for')?.split(',')[0].trim() ||
-    req.headers.get('x-real-ip') ||
-    req.headers.get('x-forwarded-for')?.split(',')[0].trim() ||
-    req.headers.get('cf-connecting-ip') ||
-    (req as NextRequest & { ip?: string }).ip ||
-    '127.0.0.1'
-  );
-}
 
 interface RateResult { ok: boolean; limit: number; remaining: number; resetSec: number; windowSec: number }
 
 function getRateLimitConfigAndCheck(compositeId: string, pathname: string): RateResult {
   const now = Date.now();
   const config = getRateLimitConfig(pathname);
-  if (rateLimitMap.size > 10000) rateLimitMap.clear();
+  capMap(rateLimitMap, 10000);
   let entry = rateLimitMap.get(compositeId);
   let ok = true;
   if (!entry || now - entry.lastReset > config.window) {
@@ -254,9 +244,12 @@ export async function proxy(request: NextRequest) {
     return res;
   }
 
-  const isPublicChallenge = pathname.startsWith('/api/challenge') || pathname.startsWith('/api/session');
-  const sessionIdRaw = request.cookies.get('__Host-session_id')?.value || request.cookies.get('session_id')?.value || 'no-session';
-  const compositeId = await hmacIdentifier(SECRET_KEY, isPublicChallenge ? `${ip}:${pathname}` : `${ip}:${ua}:${sessionIdRaw}`);
+  // Rate-limit key = IP (+ API route). It must NOT include the session cookie
+  // or the User-Agent: visiting any page hands out a fresh session for free and
+  // the UA is client-controlled, so either one let a single IP bypass the limit
+  // on /api/chat-ai (unlimited paid LLM calls).
+  const rlBucket = pathname.startsWith('/api/') ? pathname.split('/').slice(0, 3).join('/') : 'page';
+  const compositeId = await hmacIdentifier(SECRET_KEY, `${ip}:${rlBucket}`);
 
   const rl = getRateLimitConfigAndCheck(compositeId, pathname);
   const isApi = pathname.startsWith('/api/');

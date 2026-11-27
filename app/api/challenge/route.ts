@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { generateChallenge } from '@/lib/pow-challenge';
+import { capMap } from '@/lib/client-ip';
 
 const challengeHits = new Map<string, { count: number; reset: number }>();
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://kasyaf-cv.my.id' || 'https://www.kasyaf-cv.my.id' || 'https://kasyaf.id' || 'https://www.kasyaf.id';
@@ -25,7 +26,7 @@ function enforceMapLimit() {
       if (now - v.reset > 60_000) challengeHits.delete(k);
     }
     // Hard Limit Safety Valve jika diserang jutaan IP unik
-    if (challengeHits.size > 5000) challengeHits.clear();
+    capMap(challengeHits, 5000);
   }
 }
 

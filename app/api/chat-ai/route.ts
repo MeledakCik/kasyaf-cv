@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyInternalToken } from "@/lib/auth";
 import { PROJECTS } from "@/data/projects";
 import { experiences } from "@/data/experience";
+import { getClientIp, capMap } from "@/lib/client-ip";
 
 const MAX_MESSAGE_LENGTH = 2000;
 const GROQ_TIMEOUT_MS = 15000;
@@ -10,23 +11,38 @@ const RATE_LIMIT_MAX = parseInt(process.env.RATE_LIMIT_MAX || '20');
 const RATE_LIMIT_WINDOW_MS = 60_000;
 const REPLAY_WINDOW_MS = 10 * 60_000;
 
+// Hard ceiling on upstream (paid) LLM calls per server instance, whatever the
+// source: a distributed flood can't run up the Groq bill / exhaust the quota.
+const GLOBAL_LLM_MAX_PER_MIN = parseInt(process.env.GLOBAL_LLM_MAX_PER_MIN || '120');
+const MAX_BODY_BYTES = 32 * 1024;
+
 interface RateEntry { count: number; lastReset: number; }
 const rateLimitMap = new Map<string, RateEntry>();
 const usedNonces = new Map<string, number>();
+const globalLlm = { count: 0, lastReset: Date.now() };
 
-function checkRateLimit(sessionId: string): boolean {
+function checkRateLimit(key: string): boolean {
   const now = Date.now();
-  const entry = rateLimitMap.get(sessionId);
+  const entry = rateLimitMap.get(key);
   if (!entry || now - entry.lastReset > RATE_LIMIT_WINDOW_MS) {
-    rateLimitMap.set(sessionId, { count: 1, lastReset: now });
+    rateLimitMap.set(key, { count: 1, lastReset: now });
     return true;
   }
   entry.count += 1;
   return entry.count <= RATE_LIMIT_MAX;
 }
 
+function takeGlobalLlmSlot(): boolean {
+  const now = Date.now();
+  if (now - globalLlm.lastReset > 60_000) {
+    globalLlm.count = 0;
+    globalLlm.lastReset = now;
+  }
+  return ++globalLlm.count <= GLOBAL_LLM_MAX_PER_MIN;
+}
+
 function logSecurityEvent(type: string, req: NextRequest, extra: Record<string, unknown> = {}) {
-  const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || '127.0.0.1';
+  const ip = getClientIp(req);
   console.warn(`[SECURITY] ${type} | ip=${ip} |`, JSON.stringify(extra));
 }
 
@@ -146,15 +162,28 @@ export async function POST(request: NextRequest) {
 
     const sessionId = request.headers.get('x-session-id') || 'unknown-session';
 
-    // 2. RATE LIMITING PER SESSION
-    if (!checkRateLimit(sessionId)) {
+    // 2. RATE LIMITING PER SESSION *AND* PER IP (sessions are free to mint,
+    //    so a session-only limit is bypassed by rotating cookies).
+    const ipOk = checkRateLimit(`ip:${getClientIp(request)}`);
+    const sessionOk = checkRateLimit(`sid:${sessionId}`);
+    if (!ipOk || !sessionOk) {
       return jsonWithSecurity({ error: "Too many requests" }, { status: 429 });
     }
 
-    const body = await request.json().catch(() => null);
+    // Bounded body read: don't buffer/parse arbitrarily large JSON.
+    const declared = Number(request.headers.get('content-length') || 0);
+    if (declared > MAX_BODY_BYTES) {
+      return jsonWithSecurity({ error: "Payload too large" }, { status: 413 });
+    }
+    const rawBody = await request.text().catch(() => '');
+    if (rawBody.length > MAX_BODY_BYTES) {
+      return jsonWithSecurity({ error: "Payload too large" }, { status: 413 });
+    }
+    let body: Record<string, unknown> | null = null;
+    try { body = JSON.parse(rawBody); } catch { body = null; }
     if (!body?.message) return jsonWithSecurity({ error: "Message required" }, { status: 400 });
 
-    const { message, _ts, _nonce } = body;
+    const { message, _ts, _nonce } = body as { message: unknown; _ts: unknown; _nonce: unknown };
     if (typeof message !== 'string') {
       return jsonWithSecurity({ error: "Invalid message" }, { status: 400 });
     }
@@ -194,6 +223,7 @@ export async function POST(request: NextRequest) {
       for (const [k, v] of rateLimitMap) {
         if (now - v.lastReset > RATE_LIMIT_WINDOW_MS) rateLimitMap.delete(k);
       }
+      capMap(rateLimitMap, MAX_TRACKED);
     }
 
     // 4. VALIDASI INPUT & GUARDRAILS
@@ -202,7 +232,13 @@ export async function POST(request: NextRequest) {
     }
 
     // FIX: Kembalikan plain text langsung agar UI tidak menampilkan JSON string mentah
-    if (injectionPhrases.some(re => re.test(message))) {
+    // History is client-supplied too (including fake "assistant" turns), so it
+    // gets the same injection screening as the new message.
+    const history = sanitizeHistory(body.history);
+    if (
+      injectionPhrases.some(re => re.test(message)) ||
+      history.some(t => injectionPhrases.some(re => re.test(t.content)))
+    ) {
       return textWithSecurity("Maaf kak 😅 Saya hanya bisa bantu seputar portfolio Muhammad Kasyaf Anugrah.");
     }
 
@@ -220,6 +256,11 @@ export async function POST(request: NextRequest) {
       return jsonWithSecurity({ error: "Server misconfigured" }, { status: 500 });
     }
 
+    if (!takeGlobalLlmSlot()) {
+      logSecurityEvent('GLOBAL_LLM_CAP', request);
+      return jsonWithSecurity({ error: "Too many requests" }, { status: 429 });
+    }
+
     const systemPrompt = buildSystemPrompt(detectedSection || null);
 
     // 5. GROQ API CALL
@@ -229,7 +270,6 @@ export async function POST(request: NextRequest) {
 
     const GROQ_MODEL = process.env.GROQ_MODEL || "openai/gpt-oss-120b";
     const isReasoningModel = /gpt-oss|qwen3|deepseek-r1/i.test(GROQ_MODEL);
-    const history = sanitizeHistory(body.history);
 
     const groqResponse = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
