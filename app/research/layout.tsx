@@ -1,221 +1,42 @@
-"use client";
-
-import { useState } from "react";
-import { useRouter, usePathname } from "next/navigation";
+import Link from "next/link";
 import { Poppins } from "next/font/google";
-import { AnimatePresence, motion } from "framer-motion";
-import { securityResearch } from "@/data/security-research";
+import { ArrowLeft } from "lucide-react";
 
 const poppins = Poppins({
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800", "900"],
+  weight: ["400", "500", "600", "700"],
 });
 
-export default function DashboardLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  const router = useRouter();
-  const pathname = usePathname();
-
-  const [isTemplatesOpen, setIsTemplatesOpen] = useState(true);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-
-  const goTo = (path: string) => {
-    router.push(path);
-    setIsMobileMenuOpen(false);
-  };
-
+export default function ResearchLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div
-      className={`${poppins.className} bg-[#0a0e1a] text-[#e2e8f0] h-screen overflow-hidden select-none`}
-    >
-      <header className="lg:hidden fixed top-0 left-0 right-0 z-40 flex items-center justify-between px-4 py-3 bg-[#0d1326]/90 backdrop-blur-xl border-b border-white/10">
-        <div onClick={() => goTo("/research")} className="cursor-pointer">
-          <p className="text-lg font-black text-blue-500">MY RESEARCH</p>
-        </div>
-
-        <button
-          onClick={() => setIsMobileMenuOpen(true)}
-          aria-label="Open menu"
-          className="flex flex-col items-center justify-center gap-1.5 w-10 h-10 rounded-lg hover:bg-white/5 transition"
-        >
-          <span className="block w-5 h-0.5 bg-white/80 rounded-full" />
-          <span className="block w-5 h-0.5 bg-white/80 rounded-full" />
-          <span className="block w-5 h-0.5 bg-white/80 rounded-full" />
-        </button>
-      </header>
-      <AnimatePresence>
-        {isMobileMenuOpen && (
-          <>
-            <motion.div
-              key="backdrop"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.25 }}
-              className="lg:hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
-              onClick={() => setIsMobileMenuOpen(false)}
-            />
-            <motion.aside
-              key="drawer"
-              initial={{ x: "-100%" }}
-              animate={{ x: 0 }}
-              exit={{ x: "-100%" }}
-              transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-              className="lg:hidden fixed top-0 left-0 z-50 w-72 max-w-[80vw] h-full bg-[#0d1326] border-r border-white/10 p-6 flex flex-col"
-            >
-              <div className="flex items-center justify-between mb-10">
-                <p
-                  onClick={() => goTo("/research")}
-                  className="text-2xl font-black text-blue-500 cursor-pointer"
-                >
-                  MY RESEARCH
-                </p>
-                <button
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  aria-label="Close menu"
-                  className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/5 text-white/60 text-xl"
-                >
-                  ✕
-                </button>
-              </div>
-
-              <SidebarNav
-                pathname={pathname}
-                isTemplatesOpen={isTemplatesOpen}
-                setIsTemplatesOpen={setIsTemplatesOpen}
-                onNavigate={goTo}
-              />
-            </motion.aside>
-          </>
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence mode="wait">
-        <motion.div
-          key="dashboard"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.4 }}
-          className="flex h-full"
-        >
-          <aside className="hidden lg:flex w-72 bg-[#0d1326]/80 backdrop-blur-2xl border-r border-white/10 p-6 flex-col fixed h-full">
-            <div
-              onClick={() => router.push("/research")}
-              className="cursor-pointer mb-10"
-            >
-              <p className="text-2xl font-black text-blue-500">MY RESEARCH</p>
-            </div>
-
-            <SidebarNav
-              pathname={pathname}
-              isTemplatesOpen={isTemplatesOpen}
-              setIsTemplatesOpen={setIsTemplatesOpen}
-              onNavigate={router.push}
-            />
-          </aside>
-
-          <main className="flex-1 h-full overflow-y-auto pt-16 lg:pt-0 lg:ml-72 p-4 sm:p-6 lg:p-8">
-            {children}
-          </main>
-        </motion.div>
-      </AnimatePresence>
-    </div>
-  );
-}
-
-function SidebarNav({
-  pathname,
-  isTemplatesOpen,
-  setIsTemplatesOpen,
-  onNavigate,
-}: {
-  pathname: string;
-  isTemplatesOpen: boolean;
-  setIsTemplatesOpen: (v: boolean) => void;
-  onNavigate: (path: string) => void;
-}) {
-  return (
-    <nav className="space-y-2 overflow-y-auto">
-      <NavItem
-        label="Dashboard"
-        path="/research"
-        active={pathname === "/research"}
-        onNavigate={onNavigate}
-      />
-
-      <div>
-        <div
-          onClick={() => setIsTemplatesOpen(!isTemplatesOpen)}
-          className="px-5 py-3 rounded-lg cursor-pointer flex justify-between text-white/70 hover:bg-white/5"
-        >
-          Research
-          <span className={`transition ${isTemplatesOpen ? "rotate-180" : ""}`}>
-            ▼
-          </span>
-        </div>
-
-        {isTemplatesOpen && (
-          <div className="pl-5 mt-2 space-y-1">
-            <div
-              onClick={() => onNavigate("/research")}
-              className="px-4 py-2 cursor-pointer hover:bg-white/5 rounded-lg"
-            >
-              All
-            </div>
-
-            {securityResearch.map((r) => (
-              <div
-                key={r.acronym}
-                onClick={() => onNavigate(`/research#${r.acronym.toLowerCase()}`)}
-                className="px-4 py-2 cursor-pointer hover:bg-white/5 rounded-lg"
-              >
-                <span className="font-semibold">{r.acronym}</span>
-                <span className="block text-xs text-white/40">{r.name}</span>
-              </div>
-            ))}
+    <div className={`${poppins.className} min-h-screen bg-[#05070d] text-[#e2e8f0]`}>
+      <header className="sticky top-0 z-40 border-b border-white/[0.06] bg-[#05070d]/80 backdrop-blur-xl">
+        <nav className="mx-auto flex max-w-6xl items-center justify-between px-4 sm:px-6 h-14">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-2 text-sm text-white/50 hover:text-white transition-colors"
+          >
+            <ArrowLeft size={16} /> Kembali
+          </Link>
+          <div className="flex items-center gap-5 text-sm">
+            <Link href="/profile" className="text-white/50 hover:text-white transition-colors">
+              Profile
+            </Link>
+            <Link href="/experience" className="text-white/50 hover:text-white transition-colors">
+              Experience
+            </Link>
+            <span className="text-white font-medium">Research</span>
           </div>
-        )}
-      </div>
+        </nav>
+      </header>
 
-      <NavItem
-        label="Leaderboard"
-        path="/leaderboard"
-        active={pathname === "/leaderboard"}
-        onNavigate={onNavigate}
-      />
+      {children}
 
-      <NavItem
-        label="Back"
-        path="/"
-        active={pathname === "/"}
-        onNavigate={onNavigate}
-      />
-    </nav>
-  );
-}
-
-function NavItem({
-  label,
-  path,
-  active,
-  onNavigate,
-}: {
-  label: string;
-  path: string;
-  active: boolean;
-  onNavigate: (path: string) => void;
-}) {
-  return (
-    <div
-      onClick={() => onNavigate(path)}
-      className={`px-5 py-3 rounded-lg cursor-pointer transition ${
-        active ? "bg-indigo-600 text-white" : "text-white/50 hover:bg-white/5"
-      }`}
-    >
-      {label}
+      <footer className="mx-auto max-w-6xl px-4 sm:px-6 pb-10">
+        <div className="border-t border-white/[0.06] pt-8 text-xs text-white/30">
+          <p>© {new Date().getFullYear()} Muhammad Kasyaf Anugrah</p>
+        </div>
+      </footer>
     </div>
   );
 }
