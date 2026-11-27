@@ -35,6 +35,7 @@ import {
 } from "@/data/experience";
 import { PROJECTS } from "@/data/projects";
 import BrandMark from "@/components/BrandMark";
+import SecurityResearch from "@/components/sections/SecurityResearch";
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -387,6 +388,9 @@ export default function ExperienceSection() {
           ))}
         </div>
       )}
+
+      {/* SECURITY RESEARCH */}
+      <SecurityResearch />
 
       {/* BOTTOM SECTION (CERTIFICATES & TOOLS / EXPERIENCE TABS) */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">

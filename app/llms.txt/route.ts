@@ -3,6 +3,7 @@
 // never drifts. Format: https://llmstxt.org
 import { PROJECTS, GITHUB_PROFILE } from "@/data/projects";
 import { certificates } from "@/data/certificates";
+import { securityResearch } from "@/data/security-research";
 import { NAME, SITE_URL, DEFAULT_DESCRIPTION, DESCRIPTION_ID, SAME_AS } from "@/lib/seo";
 
 export const dynamic = "force-static";
@@ -15,6 +16,10 @@ export function GET() {
 
   const certs = certificates
     .map((c) => `- ${c.title}, ${c.issuer} (${c.date})${c.verifyUrl ? ` verify: ${c.verifyUrl}` : ""}`)
+    .join("\n");
+
+  const research = securityResearch
+    .map((r) => `- ${r.acronym} (${r.name}): ${r.summary.en}\n${r.cv.en.map((b) => `  - ${b}`).join("\n")}`)
     .join("\n");
 
   const body = `# ${NAME}
@@ -31,6 +36,9 @@ ${DESCRIPTION_ID}
 
 ## Products (live or released)
 ${projects}
+
+## Security Research
+${research}
 
 ## Certificates
 ${certs}
