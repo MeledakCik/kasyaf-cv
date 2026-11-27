@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { sealMediaPath } from '@/lib/media-token';
 
 const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:8000';
 const TIMEOUT = 120000;
@@ -64,7 +65,11 @@ export async function POST(request: NextRequest) {
 
     const response = await fetch(
       `${BACKEND_URL}/convert?url=${encodeURIComponent(url)}`,
-      { signal: controller.signal }
+      {
+        signal: controller.signal,
+        // Opsional: backend bisa menolak semua request tanpa kunci ini.
+        headers: process.env.BACKEND_SHARED_SECRET ? { 'x-backend-key': process.env.BACKEND_SHARED_SECRET } : {},
+      }
     );
     clearTimeout(timeoutId);
 
@@ -90,6 +95,19 @@ export async function POST(request: NextRequest) {
 
     if (audioUrl && !/^https?:\/\//i.test(audioUrl)) {
       audioUrl = undefined; // never hand javascript:/data: URLs back to the client
+    }
+
+    // Sembunyikan host backend: file yang ada di backend sendiri diganti
+    // token terenkripsi (AES-GCM) yang di-stream lewat /api/media/<token>.
+    if (audioUrl) {
+      try {
+        const u = new URL(audioUrl);
+        if (u.origin === new URL(BACKEND_URL).origin) {
+          audioUrl = `/api/media/${await sealMediaPath(u.pathname + u.search)}`;
+        }
+      } catch {
+        audioUrl = undefined;
+      }
     }
 
     if (!audioUrl) {

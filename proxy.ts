@@ -41,6 +41,12 @@ interface RateEntry { count: number; lastReset: number; lastSeen: number; }
 const rateLimitMap = new Map<string, RateEntry>();
 let lastCleanup = Date.now();
 
+
+// Jebakan scanner: path yang hanya dicari bot eksploit (.env, .git, WordPress, PHP...).
+// Situs ini Next.js murni, jadi tidak ada user asli yang membuka path ini.
+// Ditolak paling awal (tanpa crypto/HMAC) supaya murah saat dibanjiri scanner.
+const SCANNER_TRAP = /^\/(?:\.env|\.git|\.svn|\.hg|\.aws|\.ssh|\.docker|\.vscode|\.idea|\.ds_store|\.htaccess|\.htpasswd|wp-|wordpress|xmlrpc|phpmyadmin|pma|adminer|cgi-bin|vendor\/|actuator|server-status|server-info|owa\/|boaform|hnap1|telescope|_ignition|solr\/|jenkins|console\/|config\.(?:json|ya?ml|php)|backup|dump\.sql|database\.sql)|\.(?:php\d?|asp|aspx|jsp|cgi|sql|bak|old|swp|ini|log)$/i;
+
 function logSecurityEvent(type: string, req: NextRequest, extra: { pathname?: string } = {}) {
   const ip = getClientIp(req);
   console.warn(`[SECURITY] ${type} | ip=${ip} | path=${extra.pathname || req.nextUrl.pathname}`);
@@ -138,7 +144,6 @@ function base64urlDecodeToJson(b64url: string): { iat?: number } | null {
 
 function buildCsp(nonce: string): string {
   const isDev = process.env.NODE_ENV !== 'production';
-  const backendUrl = process.env.BACKEND_URL || 'https://melody-be-production.up.railway.app';
   const scriptSrc = isDev
     ? `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' 'unsafe-eval' 'unsafe-inline' 'wasm-unsafe-eval' https://cdn.jsdelivr.net https://unpkg.com`
     : `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' 'wasm-unsafe-eval' https://cdn.jsdelivr.net https://unpkg.com`;
@@ -148,8 +153,8 @@ function buildCsp(nonce: string): string {
     `style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net https://unpkg.com`,
     `font-src 'self' data: https://fonts.gstatic.com https://cdn.jsdelivr.net https://unpkg.com`,
     `img-src 'self' data: blob: https:`,
-    `connect-src 'self' ${backendUrl} https://kasyaf-ai-agent.my.id https://www.kasyaf-ai-agent.my.id https://*.githack.com https://*.githubusercontent.com https://api.groq.com https://cdn.jsdelivr.net https://unpkg.com https://lottie.host https://*.lottiefiles.com wss://*.sylvorlabs.com wss://${backendUrl.replace('https://', '')}${devConnect}`,
-    `media-src 'self' ${backendUrl} blob:`, `object-src 'none'`, `frame-ancestors 'none'`, `form-action 'self'`, `worker-src 'self' blob: https://cdn.jsdelivr.net https://unpkg.com`,
+    `connect-src 'self' https://kasyaf-ai-agent.my.id https://www.kasyaf-ai-agent.my.id https://*.githack.com https://*.githubusercontent.com https://api.groq.com https://cdn.jsdelivr.net https://unpkg.com https://lottie.host https://*.lottiefiles.com wss://*.sylvorlabs.com${devConnect}`,
+    `media-src 'self' blob:`, `object-src 'none'`, `frame-ancestors 'none'`, `form-action 'self'`, `worker-src 'self' blob: https://cdn.jsdelivr.net https://unpkg.com`,
     `manifest-src 'self'`,
     ...(isDev ? [] : ['upgrade-insecure-requests']),
   ].join('; ');
@@ -186,7 +191,7 @@ function setSecurityHeaders(res: NextResponse, nonce: string, pathname: string =
     res.headers.set('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload');
   }
   res.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
-  if (pathname.startsWith('/api/')) {
+  if (pathname.startsWith('/api/') && !pathname.startsWith('/api/media/')) {
     res.headers.set('Cache-Control', 'no-store');
   }
 }
@@ -197,6 +202,14 @@ export async function proxy(request: NextRequest) {
   // BYPASS SEO
   if (pathname === '/sitemap.xml' || pathname === '/robots.txt' || pathname === '/favicon.ico') {
     return NextResponse.next();
+  }
+
+  if (SCANNER_TRAP.test(pathname)) {
+    console.warn(`[SECURITY] SCANNER_TRAP | ip=${getClientIp(request)} | path=${pathname}`);
+    return new NextResponse(null, {
+      status: 404,
+      headers: { 'Cache-Control': 'public, max-age=86400', 'X-Robots-Tag': 'noindex' },
+    });
   }
 
   const nonce = generateNonce();
