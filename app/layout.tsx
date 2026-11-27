@@ -88,11 +88,8 @@ export const metadata: Metadata = {
     title: `${NAME} | ${JOB_TITLE}`,
     description: DESCRIPTION_ID,
   },
-  icons: {
-    icon: "/images/logo.png",
-    shortcut: "/images/logo.png",
-    apple: "/images/logo.png",
-  },
+  // Icons come from the file conventions app/icon.svg, app/favicon.ico and
+  // app/apple-icon.png (the old 940 KB logo.png was used as the favicon).
   verification: {
     google: "BhxoCE5pDRmhMsvBgkRdKyw8dqNYMFc4jvOfFclWLRw",
   },

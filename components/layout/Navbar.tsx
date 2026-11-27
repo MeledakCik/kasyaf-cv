@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
+import BrandMark from '@/components/BrandMark';
 import { Menu, X } from 'lucide-react';
 
 const navItems = [
@@ -43,22 +43,11 @@ export default function Navbar() {
     >
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-14 sm:h-16">
-          <Link href="/" className="flex items-center gap-2 flex-shrink-0">
-            <div className="relative w-8 h-8 sm:w-9 sm:h-9 rounded-full overflow-hidden border-2 border-[#39e6b5]/30 hover:border-[#39e6b5] transition-all duration-300 hover:scale-105">
-              <Image
-                src="/images/logo.png"
-                alt="Kasyaf Logo"
-                fill
-                sizes="(max-width: 640px) 32px, 36px"
-                className="object-cover"
-                priority
-              />
-            </div>
-            <span 
-              className="text-xs sm:text-sm font-bold tracking-[0.15em] sm:tracking-[0.2em] text-[#39e6b5] hover:text-[#39e6b5]/80 transition-colors hidden xs:inline"
-              style={{ fontFamily: "var(--font-poppins), 'Poppins', sans-serif" }}
-            >
-              KASYAF
+          <Link href="/" className="group flex items-center gap-2.5 flex-shrink-0" aria-label="Kasyaf, home">
+            <BrandMark className="h-8 w-8 sm:h-9 sm:w-9 transition-transform duration-300 group-hover:scale-105" title="Kasyaf logo" />
+            <span className="flex flex-col leading-none" style={{ fontFamily: "var(--font-poppins), 'Poppins', sans-serif" }}>
+              <span className="text-sm sm:text-[15px] font-bold tracking-[0.22em] text-[#eaf0fb]">KASYAF</span>
+              <span className="mt-1 hidden text-[9px] tracking-[0.2em] text-[#7c8aac] sm:block">DEVELOPER · SECURITY</span>
             </span>
           </Link>
           <div className="hidden md:flex items-center justify-center gap-4 lg:gap-8 flex-1 mx-4">

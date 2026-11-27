@@ -1,10 +1,14 @@
 "use client";
 
 import { motion } from "framer-motion";
-import Image from "next/image";
+import BrandMark from "@/components/BrandMark";
+import { PROJECTS } from "@/data/projects";
 import Link from "next/link";
 import { ArrowRight, Mail, MapPin } from "lucide-react";
 import { FaGithub, FaLinkedinIn } from "react-icons/fa6";
+
+// Distinct platforms the shipped products run on (Cloud is hosting, not a platform).
+const PLATFORM_COUNT = new Set(PROJECTS.flatMap((p) => p.platforms).filter((x) => x !== "Cloud")).size;
 
 export default function Hero() {
   return (
@@ -151,85 +155,52 @@ export default function Hero() {
             </motion.div>
           </div>
           <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{
-              duration: 0.8,
-              delay: 0.2,
-              ease: [0.25, 0.1, 0.25, 1],
-            }}
-            className="relative flex-shrink-0 hidden lg:block"
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
+            className="relative hidden w-full max-w-sm flex-shrink-0 lg:block xl:max-w-md"
           >
-            <motion.div
-              className="relative w-64 h-64 sm:w-72 sm:h-72 lg:w-80 lg:h-80 xl:w-96 xl:h-96"
-              whileHover={{
-                scale: 1.02,
-                transition: { duration: 0.3, ease: "easeOut" },
-              }}
-            >
-              <motion.div
-                className="absolute inset-0 rounded-2xl bg-[#39e6b5]/5 blur-2xl"
-                animate={{
-                  opacity: [0.3, 0.6, 0.3],
-                }}
-                transition={{
-                  duration: 4,
-                  repeat: Infinity,
-                  ease: "easeInOut",
-                }}
-              />
-              <div className="relative w-full h-full rounded-2xl overflow-hidden border border-[#39e6b5]/10 bg-gradient-to-br from-[#39e6b5]/5 to-transparent p-[2px] shadow-2xl shadow-[#39e6b5]/5">
-                <div className="w-full h-full rounded-2xl overflow-hidden bg-[#05070d]">
-                  <Image
-                    src="/images/profile.png"
-                    alt="Muhammad Kasyaf Anugrah, Full Stack Developer from Bandung, Indonesia"
-                    width={500}
-                    height={500}
-                    className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
-                    priority
-                    sizes="(max-width: 768px) 256px, (max-width: 1024px) 320px, 384px"
-                  />
+            <div className="pointer-events-none absolute -inset-6 rounded-[32px] bg-[#3b82f6]/10 blur-3xl" aria-hidden="true" />
+            <div className="relative overflow-hidden rounded-3xl border border-[#1f2c45] bg-[#0a1120]/90 shadow-2xl shadow-black/40 backdrop-blur-sm">
+              <div className="flex items-center gap-4 border-b border-[#1f2c45]/70 p-6">
+                <div className="grid h-16 w-16 shrink-0 place-items-center rounded-2xl border border-[#1f2c45] bg-[#05070d]">
+                  <BrandMark className="h-11 w-11" title="Kasyaf logo" />
+                </div>
+                <div className="min-w-0">
+                  <p className="truncate text-base font-semibold text-[#eaf0fb]">Muhammad Kasyaf Anugrah</p>
+                  <p className="mt-0.5 text-xs text-[#7c8aac]">Full Stack Developer · Cyber Security</p>
+                  <p className="mt-2 inline-flex items-center gap-1.5 text-[11px] text-[#9fb0cf]">
+                    <MapPin className="h-3 w-3" aria-hidden="true" /> Bandung, Indonesia · Remote
+                  </p>
                 </div>
               </div>
-              <motion.div
-                className="absolute -inset-4 rounded-2xl border border-[#39e6b5]/5"
-                animate={{ rotate: 360 }}
-                transition={{ duration: 30, repeat: Infinity, ease: "linear" }}
-              >
-                <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-[#39e6b5]/30" />
-              </motion.div>
-              <motion.div
-                initial={{ opacity: 0, x: 10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.6, delay: 0.7, ease: "easeOut" }}
-                className="absolute -top-4 -right-4 bg-[#101b30]/80 backdrop-blur-sm border border-[#39e6b5]/10 rounded-lg px-3 py-1.5"
-              >
-                <span
-                  className="text-[11px] text-[#39e6b5]/70"
-                  style={{ fontFamily: "var(--font-poppins), 'Poppins', sans-serif" }}
-                >
-                  🚀 5+ Years
-                </span>
-              </motion.div>
 
-              <motion.div
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.6, delay: 0.85, ease: "easeOut" }}
-                className="absolute -bottom-3 -left-3 bg-[#101b30]/80 backdrop-blur-sm border border-[#1f2c45]/30 rounded-lg px-3 py-1.5"
-              >
-                <span
-                  className="text-[11px] text-[#7c8aac]/70"
-                  style={{ fontFamily: "var(--font-poppins), 'Poppins', sans-serif" }}
-                >
-                  <span className="text-[#39e6b5]/60">✦</span> 30+ Projects
-                </span>
-              </motion.div>
-              <div className="absolute -top-1.5 -left-1.5 w-5 h-5 border-t border-l border-[#39e6b5]/10 rounded-tl" />
-              <div className="absolute -top-1.5 -right-1.5 w-5 h-5 border-t border-r border-[#39e6b5]/10 rounded-tr" />
-              <div className="absolute -bottom-1.5 -left-1.5 w-5 h-5 border-b border-l border-[#39e6b5]/10 rounded-bl" />
-              <div className="absolute -bottom-1.5 -right-1.5 w-5 h-5 border-b border-r border-[#39e6b5]/10 rounded-br" />
-            </motion.div>
+              <div className="grid grid-cols-3 divide-x divide-[#1f2c45]/70 border-b border-[#1f2c45]/70 text-center">
+                {[
+                  { value: String(PROJECTS.length), label: "Live products" },
+                  { value: String(PLATFORM_COUNT), label: "Platforms" },
+                  { value: "5+", label: "Years" },
+                ].map((s) => (
+                  <div key={s.label} className="px-3 py-4">
+                    <p className="text-xl font-semibold text-[#eaf0fb]">{s.value}</p>
+                    <p className="mt-0.5 text-[10px] uppercase tracking-[0.16em] text-[#7c8aac]">{s.label}</p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="p-6">
+                <p className="mb-3 font-mono text-[10px] uppercase tracking-[0.24em] text-[#39e6b5]">Shipped &amp; in use</p>
+                <ul className="space-y-2.5">
+                  {PROJECTS.slice(0, 4).map((p) => (
+                    <li key={p.slug} className="flex items-center gap-3">
+                      <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: p.accent }} aria-hidden="true" />
+                      <span className="flex-1 truncate text-sm text-[#c3cde3]">{p.name}</span>
+                      <span className="shrink-0 text-[10px] text-[#7c8aac]">{p.status}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
           </motion.div>
         </div>
       </div>

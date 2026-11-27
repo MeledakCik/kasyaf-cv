@@ -4,7 +4,7 @@
  * context (app/api/chat-ai) and the JSON-LD structured data for SEO.
  */
 
-export type ProjectPlatform = "Android" | "iOS" | "Windows" | "Web" | "Cloud";
+export type ProjectPlatform = "Android" | "iOS" | "Windows" | "macOS" | "Web" | "Cloud";
 
 export interface PortfolioProject {
   slug: string;
@@ -20,6 +20,13 @@ export interface PortfolioProject {
   liveUrl?: string;
   repoUrl?: string;
   extraRepos?: { label: string; url: string }[];
+  /** Public installer / release page, for apps people can download. */
+  downloadUrl?: string;
+  /**
+   * false = not ready to show publicly (site down, unfinished...). Kept here so
+   * it can be switched back on, but filtered out of PROJECTS.
+   */
+  ready?: boolean;
   status: string;
   featured?: boolean;
   accent: string;
@@ -27,25 +34,26 @@ export interface PortfolioProject {
 
 const GH = "https://github.com/MeledakCik";
 
-export const PROJECTS: PortfolioProject[] = [
+const ALL_PROJECTS: PortfolioProject[] = [
   {
     slug: "depup-office",
     name: "DepUp Office",
-    tagline: "Offline-first office suite for Android, iOS & Windows",
+    tagline: "Offline-first office suite for Android, iOS, Windows & macOS",
     description:
       "A privacy-first productivity suite that reads, edits and creates Word, Excel and PDF documents with on-device OCR, a document scanner and an encrypted vault. Everything runs locally, with no cloud upload.",
     highlights: [
       "DOCX/XLSX/PDF writers and readers built from scratch (no third-party document libraries)",
       "AES-256-GCM vault, anti-tamper & anti-prompt-injection hardening (v4.1)",
-      "Same feature set ported to iOS (Swift) and Windows (C# .NET 8 WinForms + GDI+, zero NuGet dependencies)",
+      "Same feature set ported to iOS (Swift) and desktop (C# .NET 8, Windows & macOS builds)",
     ],
     stack: ["Kotlin", "Swift", "C# .NET 8 WinForms", "OCR", "AES-256-GCM"],
-    platforms: ["Android", "iOS", "Windows"],
+    platforms: ["Android", "iOS", "Windows", "macOS"],
     category: "Mobile & Desktop",
     schemaCategory: "BusinessApplication",
     repoUrl: `${GH}/DepupOffice`,
-    extraRepos: [{ label: "Windows", url: `${GH}/DepupOffice-Dekstop` }],
-    status: "v4.1",
+    extraRepos: [{ label: "Desktop", url: `${GH}/DepupOffice-Dekstop` }],
+    downloadUrl: `${GH}/DepupOffice/releases/latest`,
+    status: "v4.4 released",
     featured: true,
     accent: "#39e6b5",
   },
@@ -86,7 +94,8 @@ export const PROJECTS: PortfolioProject[] = [
     category: "Developer Tools",
     schemaCategory: "DeveloperApplication",
     repoUrl: `${GH}/DepupCode`,
-    status: "v2.5.4 release",
+    downloadUrl: `${GH}/DepupCode/releases/latest`,
+    status: "v2.5.4 released",
     accent: "#8b5cf6",
   },
   {
@@ -106,7 +115,9 @@ export const PROJECTS: PortfolioProject[] = [
     schemaCategory: "DeveloperApplication",
     liveUrl: "https://console.kasyaf.id",
     repoUrl: `${GH}/redis-mini`,
-    status: "Live",
+    status: "In development",
+    // console.kasyaf.id returns 404 (checked 2026-11-27): hidden until it is back up.
+    ready: false,
     accent: "#f97316",
   },
   {
@@ -150,5 +161,8 @@ export const PROJECTS: PortfolioProject[] = [
     accent: "#eab308",
   },
 ];
+
+/** Only projects that are live / released and ready for other people to use. */
+export const PROJECTS: PortfolioProject[] = ALL_PROJECTS.filter((p) => p.ready !== false);
 
 export const GITHUB_PROFILE = GH;

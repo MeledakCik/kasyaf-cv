@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowUpRight, Monitor, Smartphone, Globe, Cloud } from "lucide-react";
+import { ArrowUpRight, Monitor, Smartphone, Globe, Cloud, Laptop, Download } from "lucide-react";
 import { FaGithub } from "react-icons/fa6";
 import Reveal from "../animations/Reveal";
 import { PROJECTS, GITHUB_PROFILE, type PortfolioProject, type ProjectPlatform } from "@/data/projects";
@@ -9,6 +9,7 @@ const PLATFORM_ICON: Record<ProjectPlatform, typeof Monitor> = {
   Android: Smartphone,
   iOS: Smartphone,
   Windows: Monitor,
+  macOS: Laptop,
   Web: Globe,
   Cloud: Cloud,
 };
@@ -24,6 +25,18 @@ function hostOf(url: string) {
 function ProjectLinks({ p }: { p: PortfolioProject }) {
   return (
     <div className="flex flex-wrap items-center gap-2">
+      {p.downloadUrl && (
+        <a
+          href={p.downloadUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1.5 rounded-full bg-[#39e6b5] px-3.5 py-1.5 text-xs font-semibold text-[#05070d] transition-colors hover:bg-[#5ff0c6] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#39e6b5]/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[#05070d]"
+          aria-label={`Download ${p.name} (latest release on GitHub)`}
+        >
+          <Download className="h-3.5 w-3.5" aria-hidden="true" />
+          Download
+        </a>
+      )}
       {p.liveUrl && (
         <a
           href={p.liveUrl}
@@ -83,7 +96,8 @@ function Meta({ p }: { p: PortfolioProject }) {
           );
         })}
       </span>
-      <span className="ml-auto rounded-full border border-[#1f2c45] px-2 py-0.5 text-[10px] text-[#9fb0cf]">
+      <span className="ml-auto inline-flex items-center gap-1.5 rounded-full border border-[#39e6b5]/20 bg-[#39e6b5]/5 px-2 py-0.5 text-[10px] text-[#9fe9d2]">
+        <span className="h-1.5 w-1.5 rounded-full bg-[#39e6b5]" aria-hidden="true" />
         {p.status}
       </span>
     </div>
@@ -182,8 +196,8 @@ export default function Projects() {
               Products I&apos;ve built &amp; shipped
             </h2>
             <p className="mt-3 max-w-2xl text-sm leading-relaxed text-[#7c8aac] sm:text-[15px]">
-              From an offline office suite on three platforms to a one-click deployment cloud. Each one designed,
-              built and secured end to end.
+              Only products that are live or released and ready to use today: from an offline office suite on
+              four platforms to a one-click deployment cloud. Each one designed, built and secured end to end.
             </p>
           </div>
           <a
@@ -207,7 +221,7 @@ export default function Projects() {
         ))}
       </div>
 
-      <div className="mt-5 grid gap-5 sm:grid-cols-2 lg:mt-6 lg:grid-cols-4 lg:gap-6">
+      <div className="mt-5 grid gap-5 sm:grid-cols-2 lg:mt-6 lg:grid-cols-3 lg:gap-6">
         {others.map((p, i) => (
           <Reveal key={p.slug} delay={i * 0.05} className="h-full">
             <ProjectCard p={p} />

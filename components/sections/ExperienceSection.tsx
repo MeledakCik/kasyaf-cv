@@ -1,7 +1,7 @@
 // components/sections/ExperienceSection.tsx - FULL FIXED VERSION
 "use client";
 
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useRef, useMemo } from "react";
 import {
   motion,
   AnimatePresence,
@@ -20,11 +20,7 @@ import {
   User,
   MapPin,
   Mail,
-  Sparkles,
   Briefcase,
-  Loader2,
-  Star,
-  GitFork,
 } from "lucide-react";
 import { SiGithub } from "react-icons/si";
 import { Poppins } from "next/font/google";
@@ -36,6 +32,8 @@ import {
   experiences,
   type CertificateItem,
 } from "@/data/experience";
+import { PROJECTS } from "@/data/projects";
+import BrandMark from "@/components/BrandMark";
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -55,17 +53,6 @@ interface TechIcon3DProps {
   icon: LucideIcon;
   color?: string;
   index?: number;
-}
-
-interface GithubRepo {
-  id: number;
-  name: string;
-  description: string | null;
-  html_url: string;
-  homepage?: string | null;
-  stargazers_count: number;
-  forks_count: number;
-  language: string | null;
 }
 
 const seededRandom = (seed: number): number => {
@@ -199,50 +186,9 @@ export default function ExperienceSection() {
   const [activeTab, setActiveTab] = useState<"tools" | "experience">("tools");
   const [activeCert, setActiveCert] = useState<CertificateItem | null>(null);
 
-  const [repos, setRepos] = useState<GithubRepo[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-
-  useEffect(() => {
-    async function fetchRepos() {
-      try {
-        setLoading(true);
-        const res = await fetch("/api/repos");
-        if (!res.ok) throw new Error("Gagal mengambil repositori");
-
-        const data = await res.json();
-
-        if (Array.isArray(data) && data.length > 0) {
-          const count = Math.random() < 0.5 ? 3 : 4;
-          const shuffled = [...data].sort(() => 0.5 - Math.random());
-          setRepos(shuffled.slice(0, Math.min(count, shuffled.length)));
-        }
-      } catch (err) {
-        console.error("Fetch API Error:", err);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchRepos();
-  }, []);
-
-  const workPhotos = [
-    {
-      id: 1,
-      url: "https://images.unsplash.com/photo-1522071820081-009f0129c71c?q=80&w=600&h=400&auto=format&fit=crop",
-      caption: "Kolaborasi & Diskusi Arsitektur Frontend",
-    },
-    {
-      id: 2,
-      url: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?q=80&w=600&h=400&auto=format&fit=crop",
-      caption: "Security Auditing & Code Review",
-    },
-    {
-      id: 3,
-      url: "https://images.unsplash.com/photo-1555949963-ff9fe0c870eb?q=80&w=600&h=400&auto=format&fit=crop",
-      caption: "Optimasi Performa Next.js & Redis",
-    },
-  ];
+  // Curated list of live / released products (data/projects.ts) instead of a
+  // random sample of every GitHub repo, which could surface unfinished work.
+  const repos = PROJECTS;
 
   const gradients = [
     "from-purple-900/40 via-violet-800/20 to-black",
@@ -270,21 +216,14 @@ export default function ExperienceSection() {
             <div className="relative group shrink-0">
               <div className="absolute -inset-1 rounded-2xl bg-gradient-to-r from-violet-500 to-emerald-400 opacity-40 blur-md group-hover:opacity-80 transition duration-500" />
               <div className="relative w-28 h-28 sm:w-32 sm:h-32 rounded-2xl overflow-hidden border-2 border-white/10 bg-[#12121c] shadow-xl flex items-center justify-center">
-                {/* ✅ Gambar LinkedIn - sudah dikonfigurasi di next.config.ts */}
-                <Image
-                  src="https://media.licdn.com/dms/image/v2/D5603AQENgPG3vGmg9w/profile-displayphoto-scale_100_100/B56aBIQcDsGsAY-/0/1787918665039?e=1790208000&v=beta&t=fz1hYC2aSJa4hsCqu95s5s9-84mB6Xxc6ch4bU1jDRg"
-                  alt="Profile Kasyaf"
-                  fill
-                  className="object-cover group-hover:scale-105 transition-transform duration-500"
-                  sizes="(max-width: 640px) 112px, 128px"
-                />
+                <BrandMark className="h-20 w-20 sm:h-24 sm:w-24" title="Kasyaf logo" />
               </div>
             </div>
 
             <div className="flex-1">
               <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3">
                 <h1 className="text-xl sm:text-2xl font-bold text-white">
-                  Kasyaf — Frontend & Security
+                  Muhammad Kasyaf Anugrah
                 </h1>
                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[10px] sm:text-xs font-bold tracking-widest text-emerald-400">
                   <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" />
@@ -309,46 +248,13 @@ export default function ExperienceSection() {
                   kakangkasyaf@gmail.com
                 </span>
                 <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/[0.05] border border-white/5">
-                  <User size={12} className="text-violet-400" /> 4y0+ Projects
-                  Shipped
+                  <User size={12} className="text-violet-400" /> {PROJECTS.length} live products
                 </span>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Work Photos Grid */}
-        <div className="px-5 sm:px-8 pb-6 sm:pb-8 pt-2">
-          <h3 className="text-white font-semibold text-sm flex items-center gap-2 mb-4">
-            <Sparkles size={16} className="text-violet-400" /> Behind the Code &
-            Work Session
-          </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-            {workPhotos.map((photo, index) => (
-              <motion.div
-                key={photo.id}
-                initial={{ opacity: 0, y: 15 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3, delay: 0.2 + index * 0.1 }}
-                className="relative group rounded-2xl overflow-hidden border border-white/15 aspect-[16/10] bg-[#12121c]"
-              >
-                {/* ✅ Gambar Unsplash - sudah dikonfigurasi di next.config.ts */}
-                <Image
-                  src={photo.url}
-                  alt={photo.caption}
-                  fill
-                  className="object-cover transition-transform duration-500 group-hover:scale-105"
-                  sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, 33vw"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent opacity-90 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity flex items-end p-4">
-                  <p className="text-xs text-white font-medium">
-                    {photo.caption}
-                  </p>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </div>
       </motion.div>
 
       {/* HEADER SECTION */}
@@ -410,19 +316,14 @@ export default function ExperienceSection() {
 
       {/* FEATURED PROJECTS FROM GITHUB API */}
       <h3 className="text-white font-semibold text-base flex items-center gap-2 mb-4">
-        <Zap size={16} className="text-emerald-400" /> Featured Repositories
+        <Zap size={16} className="text-emerald-400" /> Shipped Products
       </h3>
 
-      {loading ? (
-        <div className="flex items-center justify-center py-12 gap-2 text-white/40">
-          <Loader2 size={18} className="animate-spin text-emerald-400" />
-          <span className="text-xs">Memuat data dari GitHub...</span>
-        </div>
-      ) : (
+      {(
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-5 mb-12">
           {repos.map((p, index) => (
             <motion.div
-              key={p.id}
+              key={p.slug}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3, delay: index * 0.1 }}
@@ -435,19 +336,12 @@ export default function ExperienceSection() {
                   } relative p-3 flex justify-between items-start`}
                 >
                   <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-black/60 text-emerald-400 border border-emerald-500/20">
-                    {p.language || "Project"}
+                    {p.category}
                   </span>
 
-                  <div className="flex items-center gap-2 text-[10px] text-white/60 bg-black/40 px-2 py-0.5 rounded-full border border-white/10">
-                    <span className="flex items-center gap-0.5">
-                      <Star size={10} className="text-yellow-400" />
-                      {p.stargazers_count}
-                    </span>
-                    <span className="flex items-center gap-0.5">
-                      <GitFork size={10} />
-                      {p.forks_count}
-                    </span>
-                  </div>
+                  <span className="text-[10px] text-white/70 bg-black/40 px-2 py-0.5 rounded-full border border-white/10">
+                    {p.status}
+                  </span>
                 </div>
                 <div className="p-5">
                   <h4
@@ -457,31 +351,33 @@ export default function ExperienceSection() {
                     {p.name}
                   </h4>
                   <p className="text-sm text-white/40 mt-1 line-clamp-2 min-h-[2.5rem]">
-                    {p.description || "Tidak ada deskripsi repositori."}
+                    {p.tagline}
                   </p>
                 </div>
               </div>
               <div className="px-5 pb-5 pt-0 flex gap-4 text-xs font-medium">
-                {p.homepage && (
+                {(p.liveUrl || p.downloadUrl) && (
                   <a
-                    href={p.homepage}
+                    href={p.liveUrl || p.downloadUrl}
                     target="_blank"
                     rel="noreferrer"
                     className="text-white flex items-center gap-1 hover:text-emerald-400 transition-colors"
                   >
                     <ExternalLink size={12} />
-                    Demo
+                    {p.liveUrl ? "Live" : "Download"}
                   </a>
                 )}
-                <a
-                  href={p.html_url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-white/40 flex items-center gap-1 hover:text-white transition-colors"
-                >
-                  <SiGithub size={12} />
-                  Code
-                </a>
+                {p.repoUrl && (
+                  <a
+                    href={p.repoUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-white/40 flex items-center gap-1 hover:text-white transition-colors"
+                  >
+                    <SiGithub size={12} />
+                    Code
+                  </a>
+                )}
               </div>
             </motion.div>
           ))}

@@ -13,6 +13,8 @@ export interface Product {
   image: string; // auto screenshot (mshots) — ganti manual kalau mau pakai gambar sendiri
   description: string;
   link: string;
+  /** false = belum siap dipamerkan (situs mati / belum selesai): disembunyikan. */
+  ready?: boolean;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -23,7 +25,7 @@ export interface Product {
 const shot = (url: string) =>
   `https://s.wordpress.com/mshots/v1/${encodeURIComponent(url)}?w=900`;
 
-export const PRODUCTS: Product[] = [
+const ALL_PRODUCTS: Product[] = [
   {
     id: "kasyaf-cloud",
     title: "Kasyaf Cloud",
@@ -32,6 +34,7 @@ export const PRODUCTS: Product[] = [
     description:
       "Managed Redis & Vector Database (Qdrant) yang ringan — alternatif Upstash, cepat dan terjangkau, jalan di Local maupun VPS.",
     link: "https://console.kasyaf.id/",
+    ready: false, // 404 (dicek 2026-11-27)
   },
   {
     id: "sentinel-id",
@@ -50,6 +53,7 @@ export const PRODUCTS: Product[] = [
     description:
       "Tools pelaporan otomatis URL phishing ke provider keamanan (Cloudflare, Google Safe Browsing, dll).",
     link: "https://report-phising-fe.vercel.app/",
+    ready: false, // 404 (dicek 2026-11-27)
   },
   {
     id: "ciklabs",
@@ -76,6 +80,7 @@ export const PRODUCTS: Product[] = [
     description:
       "Multi-provider automated threat mitigation tool untuk melaporkan URL phishing secara otomatis ke Cloudflare dan Google.",
     link: "https://sylvorlabs.web.id/",
+    ready: false, // domain tidak bisa diakses (dicek 2026-11-27)
   },
   {
     id: "kala-koffie",
@@ -102,6 +107,7 @@ export const PRODUCTS: Product[] = [
     image: shot("https://monitor-id.vercel.app/"),
     description: "Dashboard monitoring / surveillance system real-time.",
     link: "https://monitor-id.vercel.app/",
+    ready: false, // masih judul default "Create Next App"
   },
   {
     id: "cikawan-gb",
@@ -120,3 +126,6 @@ export const PRODUCTS: Product[] = [
     link: "https://ramadhansahur.lovable.app/",
   },
 ];
+
+/** Hanya produk yang live dan siap dipakai orang lain. */
+export const PRODUCTS: Product[] = ALL_PRODUCTS.filter((p) => p.ready !== false);

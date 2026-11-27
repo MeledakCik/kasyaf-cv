@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <rect width="64" height="64" rx="14" fill="#05070d"/>
+  <defs>
+    <linearGradient id="kb" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3b82f6"/>
+      <stop offset="1" stop-color="#4f46e5"/>
+    </linearGradient>
+    <linearGradient id="kg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#6b7280"/>
+      <stop offset="1" stop-color="#374151"/>
+    </linearGradient>
+    <linearGradient id="ks" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f8fafc"/>
+      <stop offset=".55" stop-color="#f8fafc"/>
+      <stop offset=".56" stop-color="#4f63ea"/>
+      <stop offset="1" stop-color="#4f46e5"/>
+    </linearGradient>
+  </defs>
+  <path d="M30.5 5.5 9 12.6V30c0 13.6 9.2 23.6 21.5 28.4" stroke="url(#kb)" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M33.5 5.5 55 12.6V30c0 13.6-9.2 23.6-21.5 28.4" stroke="url(#kg)" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M22 18.5h6.2v27H22z" fill="url(#ks)"/>
+  <path d="M28.2 30.2 38.6 18.5h7.6L32.6 33.4z" fill="#f8fafc"/>
+  <path d="M30.4 34.6l2.4-2.9 13.6 13.8h-7.7z" fill="#f8fafc"/>
+</svg>
