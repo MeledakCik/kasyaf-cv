@@ -42,10 +42,13 @@ const rateLimitMap = new Map<string, RateEntry>();
 let lastCleanup = Date.now();
 
 
-// Jebakan scanner: path yang hanya dicari bot eksploit (.env, .git, WordPress, PHP...).
-// Situs ini Next.js murni, jadi tidak ada user asli yang membuka path ini.
-// Ditolak paling awal (tanpa crypto/HMAC) supaya murah saat dibanjiri scanner.
-const SCANNER_TRAP = /^\/(?:\.env|\.git|\.svn|\.hg|\.aws|\.ssh|\.docker|\.vscode|\.idea|\.ds_store|\.htaccess|\.htpasswd|wp-|wordpress|xmlrpc|phpmyadmin|pma|adminer|cgi-bin|vendor\/|actuator|server-status|server-info|owa\/|boaform|hnap1|telescope|_ignition|solr\/|jenkins|console\/|config\.(?:json|ya?ml|php)|backup|dump\.sql|database\.sql)|\.(?:php\d?|asp|aspx|jsp|cgi|sql|bak|old|swp|ini|log)$/i;
+// HONEYPOT: path yang cuma dicari hacker/bot eksploit (.env, .git, WordPress,
+// phpMyAdmin, panel admin palsu, file backup...). Situs ini Next.js murni dan
+// tidak punya halaman-halaman ini, jadi pengunjung asli tidak akan pernah kena.
+// Dijawab paling awal (tanpa crypto/HMAC) supaya tetap murah saat dibanjiri.
+const HONEYPOT = /^\/(?:\.env|\.git|\.svn|\.hg|\.aws|\.ssh|\.docker|\.vscode|\.idea|\.ds_store|\.htaccess|\.htpasswd|wp-|wordpress|xmlrpc|phpmyadmin|pma|adminer|admin|administrator|dashboard-admin|cpanel|webmail|cgi-bin|vendor\/|actuator|server-status|server-info|owa\/|boaform|hnap1|telescope|_ignition|solr\/|jenkins|console\/|config\.(?:json|ya?ml|php)|backup|dump\.sql|database\.sql|secret|private|api\/(?:admin|internal|v1\/users|debug))|\.(?:php\d?|asp|aspx|jsp|cgi|sql|bak|old|swp|ini|log|zip|tar|gz|rar)$/i;
+
+const HONEYPOT_TEXT = 'yahahahha kamu kena prank';
 
 function logSecurityEvent(type: string, req: NextRequest, extra: { pathname?: string } = {}) {
   const ip = getClientIp(req);
@@ -191,7 +194,7 @@ function setSecurityHeaders(res: NextResponse, nonce: string, pathname: string =
     res.headers.set('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload');
   }
   res.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
-  if (pathname.startsWith('/api/') && !pathname.startsWith('/api/media/')) {
+  if (pathname.startsWith('/api/')) {
     res.headers.set('Cache-Control', 'no-store');
   }
 }
@@ -204,11 +207,16 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  if (SCANNER_TRAP.test(pathname)) {
-    console.warn(`[SECURITY] SCANNER_TRAP | ip=${getClientIp(request)} | path=${pathname}`);
-    return new NextResponse(null, {
-      status: 404,
-      headers: { 'Cache-Control': 'public, max-age=86400', 'X-Robots-Tag': 'noindex' },
+  if (HONEYPOT.test(pathname)) {
+    console.warn(`[SECURITY] HONEYPOT | ip=${getClientIp(request)} | ${request.method} ${pathname} | ua=${request.headers.get('user-agent') || '-'}`);
+    return new NextResponse(HONEYPOT_TEXT, {
+      status: 200,
+      headers: {
+        'Content-Type': 'text/plain; charset=utf-8',
+        'Cache-Control': 'public, max-age=86400',
+        'X-Robots-Tag': 'noindex, nofollow',
+        'X-Content-Type-Options': 'nosniff',
+      },
     });
   }
 

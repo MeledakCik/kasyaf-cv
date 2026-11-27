@@ -60,7 +60,7 @@ interface VisualState {
   isPaused: boolean;
 }
 
-type SourceMode = "file" | "url" | "social";
+type SourceMode = "file" | "url";
 type VisualMode = "auto" | "wave" | "peak";
 
 export default function MathWaveVisualizer() {
@@ -75,13 +75,6 @@ export default function MathWaveVisualizer() {
 
   const [started, setStarted] = useState<boolean>(false);
   const [sourceMode, setSourceMode] = useState<SourceMode>("file");
-  const [convertedMediaUrl, setConvertedMediaUrl] = useState<string | null>(
-    null,
-  );
-  const [isConverting, setIsConverting] = useState<boolean>(false);
-  const [convertStatus, setConvertStatus] = useState<string>(
-    "Masukkan URL lalu klik Konversi",
-  );
   const [isPaused, setIsPaused] = useState<boolean>(false);
   const [currentMode, setCurrentMode] = useState<VisualMode>("auto");
   const [bpmDisplay, setBpmDisplay] = useState<string>("--");
@@ -97,7 +90,6 @@ export default function MathWaveVisualizer() {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const urlInputRef = useRef<HTMLInputElement>(null);
-  const socialUrlInputRef = useRef<HTMLInputElement>(null);
   const randomCheckRef = useRef<HTMLInputElement>(null);
 
   const audioCtxRef = useRef<AudioContext | null>(null);
@@ -733,15 +725,6 @@ export default function MathWaveVisualizer() {
             return;
           }
           url = inputUrl;
-        } else if (sourceMode === "social") {
-          if (!url) {
-            setErrorMessage("❌ Silakan konversi URL terlebih dahulu");
-            return;
-          }
-          if (!url.startsWith("http")) {
-            setErrorMessage("❌ URL hasil konversi tidak valid");
-            return;
-          }
         }
 
         if (!url) {
@@ -911,56 +894,6 @@ export default function MathWaveVisualizer() {
     startVisualizationRef.current = startVisualization;
   }, [startVisualization]);
 
-  const handleConvert = useCallback(async () => {
-    const url = socialUrlInputRef.current?.value.trim();
-    if (!url) {
-      setConvertStatus("⚠️ Masukkan URL.");
-      return;
-    }
-
-    setConvertStatus("⏳ Mengonversi...");
-    setIsConverting(true);
-    setErrorMessage(null);
-
-    try {
-      console.log("📤 Sending convert request for:", url);
-
-      const resp = await fetch("/api/convert", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url }),
-      });
-
-      const data = await resp.json();
-      console.log("📥 Convert response:", data);
-
-      if (!resp.ok || !data.success) {
-        throw new Error(data.error || "Konversi gagal");
-      }
-
-      const mediaUrl = data.media_url || data.audio_url;
-      if (!mediaUrl) {
-        throw new Error("Tidak ditemukan link media.");
-      }
-
-      setConvertedMediaUrl(mediaUrl);
-      setConvertStatus(`✅ Berhasil: ${data.title || "Media"}`);
-
-      console.log("🎵 Final Media URL:", mediaUrl);
-
-      if (startVisualizationRef.current) {
-        await startVisualizationRef.current(mediaUrl);
-      }
-    } catch (err) {
-      const errMessage = (err as Error).message;
-      setConvertStatus("❌ " + errMessage);
-      setErrorMessage(errMessage);
-      console.error("❌ Convert error:", err);
-    } finally {
-      setIsConverting(false);
-    }
-  }, []);
-
   const handleUpload = useCallback(() => {
     if (sourceMode === "file") {
       if (!fileInputRef.current?.files?.[0]) {
@@ -978,16 +911,8 @@ export default function MathWaveVisualizer() {
       if (startVisualizationRef.current) {
         startVisualizationRef.current();
       }
-    } else if (sourceMode === "social") {
-      if (!convertedMediaUrl) {
-        setErrorMessage("❌ Silakan konversi URL terlebih dahulu");
-        return;
-      }
-      if (startVisualizationRef.current) {
-        startVisualizationRef.current(convertedMediaUrl);
-      }
     }
-  }, [sourceMode, convertedMediaUrl]);
+  }, [sourceMode]);
 
   const togglePlayPause = useCallback(() => {
     const vs = visualStateRef.current;
@@ -1158,7 +1083,7 @@ export default function MathWaveVisualizer() {
           ✦ MATH WAVE · RHYTHM
         </div>
         <div className="sub-text text-[8px] sm:text-[10px] px-2 sm:px-3 py-0.5 sm:py-1">
-          upload file, URL langsung, atau konversi dari sosial media
+          upload file atau URL langsung
         </div>
 
         <div
@@ -1177,12 +1102,6 @@ export default function MathWaveVisualizer() {
               onClick={() => setSourceMode("url")}
             >
               🔗 URL
-            </button>
-            <button
-              className={`source-btn text-[8px] sm:text-[10px] md:text-xs px-1.5 sm:px-2 md:px-3 py-1 sm:py-1.5 ${sourceMode === "social" ? "active" : ""}`}
-              onClick={() => setSourceMode("social")}
-            >
-              🌐 Sosial
             </button>
           </div>
 
@@ -1210,28 +1129,6 @@ export default function MathWaveVisualizer() {
             />
             <div className="url-hint text-[6px] sm:text-[8px]">
               * Link langsung ke file media
-            </div>
-          </div>
-
-          <div
-            className="input-wrapper"
-            style={{ display: sourceMode === "social" ? "flex" : "none" }}
-          >
-            <input
-              type="text"
-              ref={socialUrlInputRef}
-              placeholder="https://youtube.com/... atau tiktok.com/..."
-              className="text-[8px] sm:text-[10px] md:text-xs px-2 sm:px-3 py-1.5 sm:py-2"
-            />
-            <button
-              className="convert-btn text-[8px] sm:text-[10px] md:text-xs px-2 sm:px-3 py-1.5 sm:py-2"
-              onClick={handleConvert}
-              disabled={isConverting}
-            >
-              ⬇️ Konversi
-            </button>
-            <div className="text-[7px] sm:text-[9px] text-[#c8b8ff] min-h-[1.2em] text-center break-all">
-              {convertStatus}
             </div>
           </div>
 

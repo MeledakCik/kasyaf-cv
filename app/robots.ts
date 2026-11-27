@@ -7,7 +7,9 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: "*",
         allow: "/",
-        disallow: ["/api/", "/v2/"],
+        // /admin, /backup, /secret = umpan honeypot. Crawler baik patuh dan tidak
+        // masuk; bot jahat justru sengaja membuka path "rahasia" di robots.txt.
+        disallow: ["/api/", "/v2/", "/admin", "/backup", "/secret"],
       },
     ],
     sitemap: `${SITE_URL}/sitemap.xml`,
